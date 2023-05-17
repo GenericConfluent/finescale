@@ -12,22 +12,22 @@ you're interested give it a try.
 
 # Features
 - [ ] View a prerequisite and corequisite dependency graph.
-  1. [ ] Select a class and view all the necessary depencencies that must be
+  - [ ] Select a class and view all the necessary depencencies that must be
 completed before it.
 - [ ] Build a schedule optimized according to certain constraints. (Like
 schedule buddy)
-  1. [ ] When a person wants their classes.
-  2. [ ] The order and position of their classes to minimize walking time.
-  3. [ ] Distribution of classes throughout the day.
+  - [ ] When a person wants their classes.
+  - [ ] The order and position of their classes to minimize walking time.
+  - [ ] Distribution of classes throughout the day.
 - [ ] Check schedule against requirements needed for graduation.
 
 # Related
-1. [schedubuddy.com] for helps build a schedule according to a list of classes.
+- [schedubuddy.com](schedubuddy.com) helps build a schedule according to a list of classes.
 You need to figure out the classes you need and schdubuddy will order them.
 [aarctan/schedubuddy-web](https://github.com/aarctan/schedubuddy-web)
 
 # Credit
-1. [Graphviz](https://graphviz.org/) is used for laying out the graph.
-2. [iced](https://iced.rs/) for gui.
-3. [abenezerBelachew/unofficial-ualberta-api](https://github.com/abenezerBelachew/unofficial-ualberta-api/blob/master/scraper.py)'s
+- [Graphviz](https://graphviz.org/) is used for laying out the graph.
+- [iced](https://iced.rs/) for gui.
+- [abenezerBelachew/unofficial-ualberta-api](https://github.com/abenezerBelachew/unofficial-ualberta-api/blob/master/scraper.py)'s
 scraper copied and modified for fetching U of A data.
