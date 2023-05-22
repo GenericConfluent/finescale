@@ -1,4 +1,5 @@
 # Finescale&mdash;A finer scale understanding of your schedule
+### &#128679; Under construction. Will be finished alongside lrt and other construction :) &#128679; -> Submit a pull request.
 Are you annoyed needing to spend time going through the UofA course catalog
 looking through prerequisites, corequisits, descriptions, and course times? It's
 a necessary activity to build and understanding of which courses you want and need
@@ -25,9 +26,9 @@ schedule buddy)
 - [schedubuddy.com](schedubuddy.com) helps build a schedule according to a list of classes.
 You need to figure out the classes you need and schdubuddy will order them.
 [aarctan/schedubuddy-web](https://github.com/aarctan/schedubuddy-web)
+- [abenezerBelachew/unofficial-ualberta-api](https://github.com/abenezerBelachew/unofficial-ualberta-api/blob/master/scraper.py).
+Some inspiration taken.
 
 # Credit
 - [Graphviz](https://graphviz.org/) is used for laying out the graph.
 - [iced](https://iced.rs/) for gui.
-- [abenezerBelachew/unofficial-ualberta-api](https://github.com/abenezerBelachew/unofficial-ualberta-api/blob/master/scraper.py)'s
-scraper copied and modified for fetching U of A data.
