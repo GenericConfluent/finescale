@@ -67,7 +67,7 @@ impl Iterator for Lexer<'_> {
                 continue;
             }
             return Some(match ch {
-                delim if [':', ',', '.', ';'].contains(&delim) => Token::Delimiter(delim),
+                ':' | ',' | '.' | ';' => Token::Delimiter(ch),
                 'a'..='z' | 'A'..='Z' => {
                     let end = self.eat_while(|ch| ch.is_ascii_alphabetic());
                     let raw_token = &self.source[begin..end];
