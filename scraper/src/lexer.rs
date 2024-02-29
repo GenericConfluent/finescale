@@ -1,5 +1,4 @@
 use enumflags2::bitflags;
-use std::ascii::AsciiExt;
 use std::iter::Enumerate;
 use std::str::Chars;
 use tinystr::TinyAsciiStr;
