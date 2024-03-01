@@ -1,0 +1,20 @@
+[package]
+name = "catalogue_scraper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.80"
+html-escape = "0.2.13"
+log = "0.4.21"
+rate_limit = "0.1.1"
+tl = "0.7.8"
+ureq = "2.9.6"
+url = "2.5.0"
+urlencoding = "2.1.3"
+write-json = "0.1.4"
+
+[dependencies.env_logger]
+version = "0.11.2"
+features = ["auto-color", "color"]
+default-features = false
