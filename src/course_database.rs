@@ -1,4 +1,7 @@
+use anyhow::anyhow;
+use core::str::FromStr;
 use petgraph::graph::DiGraph;
+use std::fmt;
 
 pub enum Requirement {
     And(Vec<Requirement>),
@@ -11,6 +14,33 @@ pub enum Requirement {
 pub struct CourseId {
     pub subject_id: String,
     pub class_id: u16,
+}
+
+impl FromStr for CourseId {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let mut pieces = value
+            .split_whitespace()
+            .filter(|string| string.trim_start().len() != 0);
+
+        Ok(CourseId {
+            subject_id: pieces
+                .next()
+                .ok_or(anyhow!("Could not find a subject id"))?
+                .to_string(),
+            class_id: pieces
+                .next()
+                .ok_or(anyhow!("Could not find the class id"))?
+                .parse()?,
+        })
+    }
+}
+
+impl std::fmt::Display for CourseId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.subject_id, self.class_id)
+    }
 }
 
 pub struct Course {
@@ -40,7 +70,6 @@ pub struct CourseDatabase {
     courses: Vec<Course>,
 }
 
-
 impl Default for CourseDatabase {
     // Simple course catalog to use for testing.
     fn default() -> Self {
@@ -54,7 +83,10 @@ impl Default for CourseDatabase {
         let cmput_174 = Course::new(
             "CMPUT",
             174,
-            Some(And(vec![Prereq(math_112.id.clone()), Coreq(cmput_102.id.clone())])),
+            Some(And(vec![
+                Prereq(math_112.id.clone()),
+                Coreq(cmput_102.id.clone()),
+            ])),
         );
         let cmput_175 = Course::new("CMPUT", 175, Some(Prereq(cmput_174.id.clone())));
 
@@ -67,7 +99,10 @@ impl Default for CourseDatabase {
             "CMPUT",
             322,
             Some(And(vec![
-                Or(vec![Requirement::Prereq(cmput_275.id.clone()), Requirement::Prereq(cmput_175.id.clone())]),
+                Or(vec![
+                    Requirement::Prereq(cmput_275.id.clone()),
+                    Requirement::Prereq(cmput_175.id.clone()),
+                ]),
                 Requirement::Prereq(cmput_202.id.clone()),
             ])),
         );

@@ -1,5 +1,4 @@
-use iced::{window, Settings, Application};
-
+use iced::{window, Application, Settings};
 
 fn main() -> iced::Result {
     finescale::FinescaleApp::run(Settings {
@@ -12,6 +11,7 @@ fn main() -> iced::Result {
             transparent: true,
             ..Default::default()
         },
+        antialiasing: true,
         ..Default::default()
     })
     // let reader = std::fs::File::open("data/courses.json").unwrap();
