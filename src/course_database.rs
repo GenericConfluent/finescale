@@ -1,6 +1,5 @@
 use anyhow::anyhow;
 use core::str::FromStr;
-use petgraph::graph::DiGraph;
 use std::fmt;
 
 pub enum Requirement {
@@ -22,7 +21,7 @@ impl FromStr for CourseId {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let mut pieces = value
             .split_whitespace()
-            .filter(|string| string.trim_start().len() != 0);
+            .filter(|string| !string.trim_start().is_empty());
 
         Ok(CourseId {
             subject_id: pieces

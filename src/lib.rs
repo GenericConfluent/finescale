@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_variables)]
+
 use iced::theme::Palette;
 use iced::widget::{button, column, container, horizontal_rule, row, text, text_input};
 use iced::{executor, Application, Color, Command, Element, Length, Theme};

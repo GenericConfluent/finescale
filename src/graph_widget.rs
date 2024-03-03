@@ -42,7 +42,7 @@ where
     }
 
     fn state(&self) -> tree::State {
-        tree::State::new(State::default())
+        tree::State::new(State)
     }
 
     fn size(&self) -> Size<Length> {
