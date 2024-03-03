@@ -4,7 +4,6 @@ use petgraph::graph::{Graph, NodeIndex};
 use serde::Deserialize;
 use std::fmt;
 
-
 #[derive(Deserialize, Clone, Debug)]
 pub enum Requirement {
     And(Vec<Requirement>),
