@@ -15,7 +15,7 @@ mod graph_widget;
 #[derive(Default)]
 pub struct FinescaleApp {
     desired_courses: Vec<CourseId>,
-    course_database: CourseDatabase,
+    course_database: Option<CourseDatabase>,
     ui_states: UiStates,
 }
 
