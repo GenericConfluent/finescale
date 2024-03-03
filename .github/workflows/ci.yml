@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  CI: 1
+  RUST_BACKTRACE: short
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo test
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy
+      - run: cargo clippy
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
+      - uses: actions-rust-lang/rustfmt@v1
