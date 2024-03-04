@@ -41,15 +41,25 @@ impl FromStr for CourseId {
             .split_whitespace()
             .filter(|string| !string.trim_start().is_empty());
 
+        let subject_id = pieces
+            .next()
+            .ok_or(anyhow!("Could not find a subject id"))?
+            .to_uppercase()
+            .to_string();
+        let class_id = pieces
+            .next()
+            .ok_or(anyhow!("Could not find the class id"))?
+            .parse()?;
+
+        if class_id < 100 || 1000 <= class_id {
+            return Err(anyhow!(
+                "Class id must be a number, at least 100 and less than 1000"
+            ));
+        }
+
         Ok(CourseId {
-            subject_id: pieces
-                .next()
-                .ok_or(anyhow!("Could not find a subject id"))?
-                .to_string(),
-            class_id: pieces
-                .next()
-                .ok_or(anyhow!("Could not find the class id"))?
-                .parse()?,
+            subject_id,
+            class_id,
         })
     }
 }
@@ -60,7 +70,7 @@ impl std::fmt::Display for CourseId {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Course {
     pub id: CourseId,
     pub name: String,
@@ -83,6 +93,7 @@ impl Course {
     }
 }
 
+#[derive(Debug)]
 pub enum DatabaseNode {
     Course(Course),
     Or,
@@ -115,6 +126,7 @@ impl fmt::Display for DatabaseNode {
 
 /// Abstraction over some way to retrieve course info for simplicity.
 /// There must only be one entry for each course.
+#[derive(Debug)]
 pub struct CourseDatabase {
     pub courses: DiGraph<DatabaseNode, Relation>,
 }

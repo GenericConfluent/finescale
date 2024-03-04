@@ -1,16 +1,22 @@
 #![allow(dead_code, unused_variables)]
 
+use std::rc::Rc;
+use std::sync::Arc;
+
+use iced::alignment::Horizontal;
 use iced::theme::Palette;
-use iced::widget::{button, column, container, horizontal_rule, row, text, text_input};
-use iced::{executor, Application, Color, Command, Element, Length, Theme};
+use iced::widget::{button, column, container, horizontal_rule, row, text, text_input, Text};
+use iced::{executor, font, Application, Color, Command, Element, Length, Padding, Theme};
 
 use iced_aw::native::Split;
-use iced_aw::{modal, split, Card};
+use iced_aw::{modal, split, Card, BOOTSTRAP_FONT_BYTES};
 
 mod course_database;
 use course_database::{CourseDatabase, CourseId};
+use icons::Icon;
 
 mod graph_widget;
+mod icons;
 
 #[derive(Default)]
 pub struct FinescaleApp {
@@ -26,22 +32,18 @@ struct UiStates {
     course_input_val: String,
 }
 
-#[derive(Default, Debug, Clone)]
-pub struct CourseGraph;
-
 #[derive(Debug, Clone)]
 pub enum Message {
-    LoadedCourses(CourseGraph),
+    LoadedCourses(Arc<anyhow::Result<CourseDatabase>>),
     MainDividerResize(u16),
     CourseInputEvent(String),
     CourseInputSubmit,
+    IconsLoaded(Result<(), font::Error>),
     ClearError,
 }
 
-async fn load_courses<P: AsRef<std::path::Path>>(path: P) -> CourseGraph {
-    //let reader = std::fs::File::open(path).unwrap();
-    //let _json: serde_json::Value = serde_json::from_reader(reader).unwrap();
-    CourseGraph
+async fn load_courses<P: AsRef<std::path::Path>>(path: P) -> Arc<anyhow::Result<CourseDatabase>> {
+    CourseDatabase::new("[]").into()
 }
 
 impl Application for FinescaleApp {
@@ -53,7 +55,10 @@ impl Application for FinescaleApp {
     fn new(_: Self::Flags) -> (Self, Command<Self::Message>) {
         (
             FinescaleApp::default(),
-            Command::perform(load_courses("data/courses.json"), Message::LoadedCourses),
+            Command::batch([
+                Command::perform(load_courses("data/courses.ron"), Message::LoadedCourses),
+                iced::font::load(icons::Icon::bytes()).map(Message::IconsLoaded),
+            ]),
         )
     }
 
@@ -63,7 +68,6 @@ impl Application for FinescaleApp {
 
     fn update(&mut self, _message: Self::Message) -> Command<Self::Message> {
         match _message {
-            Message::LoadedCourses(_) => {}
             Message::ClearError => self.ui_states.error_modal = None,
             // TODO: Limit the divider movement
             Message::MainDividerResize(amt) => self.ui_states.main_divider_pos = Some(amt),
@@ -79,6 +83,7 @@ impl Application for FinescaleApp {
                     }
                 }
             }
+            _ => {}
         }
 
         Command::none()
@@ -86,16 +91,37 @@ impl Application for FinescaleApp {
 
     fn view(&self) -> Element<Self::Message> {
         let mut left = column![
-            text("Desired Classes"),
+            text("Desired Classes")
+                .width(Length::Fill)
+                .size(40)
+                .style(Color::from_rgb(0.5, 0.5, 0.5))
+                .horizontal_alignment(Horizontal::Center),
             text_input("Start typing!", &self.ui_states.course_input_val)
+                .padding(15)
                 .on_input(Message::CourseInputEvent)
                 .on_submit(Message::CourseInputSubmit),
+        ]
+        .spacing(10);
+
+        let mut right = column![
+            row![text("Required Classes")
+                .width(Length::Fill)
+                .size(40)
+                .style(Color::from_rgb(0.5, 0.5, 0.5))
+                .horizontal_alignment(iced::alignment::Horizontal::Left),],
+            horizontal_rule(2)
         ];
-        let mut right = column![row![text("Required Classes"),], horizontal_rule(2)];
 
         for course in self.desired_courses.iter() {
+            left = left.push(
+                row![
+                    text(course).width(Length::Fill),
+                    button(Into::<Text>::into(Icon::DeleteForever)).padding(10)
+                ]
+                .spacing(20)
+                .align_items(iced::Alignment::Center),
+            );
             right = right.push(text(course));
-            left = left.push(text(course));
         }
 
         // Todo read and push courses.
@@ -108,26 +134,19 @@ impl Application for FinescaleApp {
         );
 
         let overlay = self.ui_states.error_modal.as_ref().map(|err_msg| {
-            Card::new(text("Error"), text(err_msg)).foot(
-                container(button("Ok").on_press(Message::ClearError))
-                    .width(Length::Fill)
-                    .align_x(iced::alignment::Horizontal::Right),
-            )
+            Card::new(text("Error"), text(err_msg))
+                .foot(
+                    container(button("Ok").on_press(Message::ClearError))
+                        .width(Length::Fill)
+                        .align_x(iced::alignment::Horizontal::Right),
+                )
+                .max_width(250.0)
         });
 
         modal(main_content, overlay).into()
     }
 
     fn theme(&self) -> Self::Theme {
-        Theme::custom(
-            "apptheme".to_string(),
-            Palette {
-                background: Color::from_rgba8(14, 14, 14, 0.1),
-                text: Color::WHITE,
-                primary: Color::WHITE,
-                success: Color::WHITE,
-                danger: Color::WHITE,
-            },
-        )
+        iced::Theme::Light
     }
 }
