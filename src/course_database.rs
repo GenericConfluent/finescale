@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use core::str::FromStr;
-use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::{dot::Dot, graph::{DiGraph, NodeIndex}};
 use serde::Deserialize;
 use std::fmt;
 
@@ -102,6 +102,16 @@ impl From<Course> for DatabaseNode {
     }
 }
 
+impl fmt::Display for DatabaseNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use DatabaseNode::*;
+        match self {
+            Or => write!(f, "OR"),
+            Course(c) => write!(f, "{}", c.id)
+        }
+    }
+}
+
 /// Abstraction over some way to retrieve course info for simplicity.
 /// There must only be one entry for each course.
 pub struct CourseDatabase {
@@ -112,6 +122,12 @@ pub struct CourseDatabase {
 pub enum Relation {
     Prereq,
     Coreq,
+}
+
+impl fmt::Display for Relation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl TryFrom<&Requirement> for Relation {
@@ -214,6 +230,10 @@ impl CourseDatabase {
             DatabaseNode::Course(course) => idx,
             _ => unreachable!(),
         })
+    }
+
+    pub fn to_dot(&self) -> String {
+        format!("{}", Dot::new(&self.courses))
     }
 }
 
