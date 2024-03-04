@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use core::str::FromStr;
-use petgraph::graph::{Graph, NodeIndex};
+use petgraph::graph::{DiGraph, NodeIndex};
 use serde::Deserialize;
 use std::fmt;
 
@@ -105,7 +105,7 @@ impl From<Course> for DatabaseNode {
 /// Abstraction over some way to retrieve course info for simplicity.
 /// There must only be one entry for each course.
 pub struct CourseDatabase {
-    courses: Graph<DatabaseNode, Relation>,
+    pub courses: DiGraph<DatabaseNode, Relation>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -135,11 +135,11 @@ impl CourseDatabase {
         course_list.dedup_by(|a, b| a.id == b.id);
 
         // Build the course graph
-        let mut courses = Graph::new();
+        let mut courses = DiGraph::new();
         let mut edge_queue = Vec::<(NodeIndex, CourseId, Relation)>::new();
 
         fn descend_deptree(
-            courses: &mut Graph<DatabaseNode, Relation>,
+            courses: &mut DiGraph<DatabaseNode, Relation>,
             edge_queue: &mut Vec<(NodeIndex, CourseId, Relation)>,
             node: &NodeIndex,
             requirement: &Requirement,
@@ -158,6 +158,7 @@ impl CourseDatabase {
                     }
                 }
                 req => {
+                    // Note that A corequisite B && B !corequisite A is true.
                     edge_queue.push((*node, req.unwrap(), req.try_into().unwrap()));
                 }
             }
@@ -204,13 +205,13 @@ impl CourseDatabase {
         Ok(Self { courses })
     }
 
-    pub fn get(&self, id: &CourseId) -> Option<Course> {
+    pub fn index_of(&self, id: &CourseId) -> Option<NodeIndex> {
         let idx = self
             .courses
             .node_indices()
             .find(|node_idx| self.courses[*node_idx].has_id(id))?;
         Some(match &self.courses[idx] {
-            DatabaseNode::Course(course) => course.clone(),
+            DatabaseNode::Course(course) => idx,
             _ => unreachable!(),
         })
     }
@@ -219,6 +220,8 @@ impl CourseDatabase {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use petgraph::visit::EdgeRef;
+
     static CMPUT_SMALL: &'static str = r#"[
 (
     id: (subject_id: "CMPUT", class_id: 101),
@@ -248,72 +251,76 @@ mod tests {
     requirements: Some(Prereq((subject_id: "MATH", class_id: 111))),
 ),
 ]"#;
+    #[track_caller]
+    fn assert_in_db(db: &CourseDatabase, id: &CourseId) -> NodeIndex {
+        let Some(course_idx) = db.index_of(id) else {
+            panic!("{} not in the Database", id);
+        };
+
+        course_idx
+    }
 
     #[test]
     fn cmput_small() {
-        let cd = match CourseDatabase::new(CMPUT_SMALL) {
-            Ok(cd) => cd,
+        let db = match CourseDatabase::new(CMPUT_SMALL) {
+            Ok(db) => db,
             Err(err) => panic!("Faild to build CourseDatabase {:?}", err),
         };
 
-        assert!(
-            matches!(
-                cd.get(&CourseId {
-                    subject_id: "CMPUT".into(),
-                    class_id: 101
-                }),
-                Some(_)
-            ),
-            "CMPUT 101 not in the Database"
+        let cmput_101_id = CourseId {
+            subject_id: "CMPUT".into(),
+            class_id: 101,
+        };
+        let math_112_id = CourseId {
+            subject_id: "MATH".into(),
+            class_id: 112,
+        };
+
+        let cmput_101 = assert_in_db(&db, &cmput_101_id);
+        let cmput_102 = assert_in_db(
+            &db,
+            &CourseId {
+                subject_id: "CMPUT".into(),
+                class_id: 102,
+            },
         );
+        let math_111 = assert_in_db(
+            &db,
+            &CourseId {
+                subject_id: "MATH".into(),
+                class_id: 111,
+            },
+        );
+        let math_112 = assert_in_db(&db, &math_112_id);
+
+        assert_eq!(
+            db.courses.edges(cmput_101).count(),
+            0,
+            "CMPUT 101 was parsed as having dependencies when it has none"
+        );
+        let mut desired = vec![cmput_101_id, math_112_id];
+
+        for edge in db.courses.edges(cmput_102) {
+            assert_eq!(
+                *edge.weight(),
+                Relation::Prereq,
+                "All dependencies of CMPUT 102 should be prereqs"
+            );
+            assert_eq!(
+                edge.source(),
+                cmput_102,
+                "There is something wrong with petgraph or the test"
+            );
+            let Some((idx, cid)) = desired
+                .iter()
+                .enumerate()
+                .find(|cid| db.courses[edge.target()].has_id(cid.1))
+            else {
+                panic!("There was an unexpected dependency on CMPUT 102");
+            };
+            desired.remove(idx);
+        }
+
+        assert!(desired.is_empty(), "CMPUT 101 had dependencies missing");
     }
 }
-
-// impl Default for CourseDatabase {
-//     // Simple course catalog to use for testing.
-//     fn default() -> Self {
-//         use Requirement::*;
-//         let cmput_101 = Course::new("CMPUT", 101, None);
-//         let cmput_102 = Course::new("CMPUT", 102,
-// Some(Prereq(cmput_101.id.clone())));
-//
-//         let math_111 = Course::new("MATH", 111, None);
-//         let math_112 = Course::new("MATH", 112,
-// Some(Prereq(math_111.id.clone())));
-//
-//         let cmput_174 = Course::new(
-//             "CMPUT",
-//             174,
-//             Some(And(vec![
-//                 Prereq(math_112.id.clone()),
-//                 Coreq(cmput_102.id.clone()),
-//             ])),
-//         );
-//         let cmput_175 = Course::new("CMPUT", 175,
-// Some(Prereq(cmput_174.id.clone())));
-//
-//         let cmput_274 = Course::new("CMPUT", 274, None);
-//         let cmput_275 = Course::new("CMPUT", 275,
-// Some(Prereq(cmput_274.id.clone())));
-//
-//         let cmput_202 = Course::new("CMPUT", 202, None);
-//
-//         let cmput_322 = Course::new(
-//             "CMPUT",
-//             322,
-//             Some(And(vec![
-//                 Or(vec![
-//                     Requirement::Prereq(cmput_275.id.clone()),
-//                     Requirement::Prereq(cmput_175.id.clone()),
-//                 ]),
-//                 Requirement::Prereq(cmput_202.id.clone()),
-//             ])),
-//         );
-//         Self {
-//             courses: vec![
-//                 cmput_101, cmput_102, math_111, math_112, cmput_174,
-// cmput_175, cmput_274,                 cmput_275, cmput_202, cmput_322,
-//             ],
-//         }
-//     }
-// }
