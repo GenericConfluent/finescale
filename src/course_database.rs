@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use core::str::FromStr;
-use petgraph::{dot::Dot, graph::{DiGraph, NodeIndex}};
+use petgraph::dot::Dot;
+use petgraph::graph::{DiGraph, NodeIndex};
 use serde::Deserialize;
 use std::fmt;
 
@@ -107,7 +108,7 @@ impl fmt::Display for DatabaseNode {
         use DatabaseNode::*;
         match self {
             Or => write!(f, "OR"),
-            Course(c) => write!(f, "{}", c.id)
+            Course(c) => write!(f, "{}", c.id),
         }
     }
 }
