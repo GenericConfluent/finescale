@@ -19,9 +19,9 @@ impl Icon {
     }
 }
 
-impl Into<Text<'static>> for Icon {
-    fn into(self) -> Text<'static> {
-        let ch = match self {
+impl From<Icon> for Text<'static> {
+    fn from(val: Icon) -> Self {
+        let ch = match val {
             Icon::AccountTree => "A",
             Icon::FullStackedBarChart => "B",
             Icon::SideNavigation => "C",

@@ -1,15 +1,13 @@
 #![allow(dead_code, unused_variables)]
 
-use std::rc::Rc;
 use std::sync::Arc;
 
 use iced::alignment::Horizontal;
-use iced::theme::Palette;
 use iced::widget::{button, column, container, horizontal_rule, row, text, text_input, Text};
-use iced::{executor, font, Application, Color, Command, Element, Length, Padding, Theme};
+use iced::{executor, font, Application, Color, Command, Element, Length, Theme};
 
 use iced_aw::native::Split;
-use iced_aw::{modal, split, Card, BOOTSTRAP_FONT_BYTES};
+use iced_aw::{modal, split, Card};
 
 mod course_database;
 use course_database::{CourseDatabase, CourseId};

@@ -51,7 +51,7 @@ impl FromStr for CourseId {
             .ok_or(anyhow!("Could not find the class id"))?
             .parse()?;
 
-        if class_id < 100 || 1000 <= class_id {
+        if !(100..1000).contains(&class_id) {
             return Err(anyhow!(
                 "Class id must be a number, at least 100 and less than 1000"
             ));
@@ -255,7 +255,7 @@ mod tests {
     use super::*;
     use petgraph::visit::EdgeRef;
 
-    static CMPUT_SMALL: &'static str = r#"[
+    static CMPUT_SMALL: &str = r#"[
 (
     id: (subject_id: "CMPUT", class_id: 101),
     name: "",
