@@ -48,6 +48,7 @@ pub enum Message {
     IconsLoaded(Result<(), font::Error>),
     // TODO: Invoke GraphViz as a subprocess and use the `open` crate to show its output.
     ShowGraph,
+    ExportToSchedubuddy,
     ClearError,
 }
 
@@ -89,6 +90,14 @@ impl FinescaleApp {
 
         self.required_courses = Some(select_courses(db, &desired_courses)?);
         Ok(())
+    }
+
+    fn open_in_schedubuddy(&self) -> anyhow::Result<()> {
+        Err(anyhow!("Export to schedubudy still needs implementation"))
+    }
+
+    fn open_graphviz(&self) -> anyhow::Result<()> {
+        Err(anyhow!("Open in graphviz still needs implementation"))
     }
 }
 
@@ -151,6 +160,18 @@ impl Application for FinescaleApp {
                     Err(issue) => self.ui_states.error_modal.push_back(issue.to_string()),
                 }
             }
+            // TODO: This should be taking a semester of courses, but there is no functionality yet
+            // to organize all the desired coureses and required courses into semesters.
+            Message::ExportToSchedubuddy => {
+                _ = self
+                    .open_in_schedubuddy()
+                    .inspect_err(|e| self.ui_states.error_modal.push_back(e.to_string()))
+            }
+            Message::ShowGraph => {
+                _ = self
+                    .open_graphviz()
+                    .inspect_err(|e| self.ui_states.error_modal.push_back(e.to_string()))
+            }
             _ => {}
         }
 
@@ -178,6 +199,9 @@ impl Application for FinescaleApp {
                     .size(40)
                     .style(Color::from_rgb(0.5, 0.5, 0.5))
                     .horizontal_alignment(iced::alignment::Horizontal::Left),
+                button(Text::from(Icon::FullStackedBarChart))
+                    .padding(10)
+                    .on_press(Message::ExportToSchedubuddy),
                 button(Text::from(Icon::AccountTree))
                     .padding(10)
                     .on_press(Message::ShowGraph)
