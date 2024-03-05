@@ -13,7 +13,7 @@ use iced_aw::{modal, split, Card};
 mod course_database;
 use course_database::{CourseDatabase, CourseId};
 use icons::Icon;
-use petgraph::graph::{NodeIndex};
+use petgraph::graph::NodeIndex;
 
 use anyhow::anyhow;
 
