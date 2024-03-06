@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0.71"
 iced = { version = "0.12.1", features = ["svg", "canvas", "advanced"] }
 iced_aw = "0.8.0"
+graph_layout = { package = "layout-rs", version = "0.1.2" }
 open = "5.1.1"
 petgraph = "0.6.3"
 ron = "0.8.1"
