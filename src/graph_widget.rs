@@ -66,6 +66,14 @@ impl IcedFrom<Point> for iced::Point {
     }
 }
 
+impl IcedFrom<&StyleAttr> for canvas::Stroke<'_> {
+    fn iced_from(val: &StyleAttr) -> Self {
+        Self::default()
+            .with_color(iced::Color::iced_from(val.line_color))
+            .with_width(val.line_width as f32)
+    }
+}
+
 impl graph_layout::core::format::RenderBackend for GraphWidgetRenderContext<'_> {
     fn draw_rect(&mut self, xy: Point, size: Point, look: &StyleAttr, clip: Option<ClipHandle>) {
         let top_left = iced::Point::iced_from(xy);
@@ -76,13 +84,18 @@ impl graph_layout::core::format::RenderBackend for GraphWidgetRenderContext<'_> 
         }
         self.f.stroke(
             &canvas::Path::rectangle(top_left, size),
-            canvas::Stroke::default()
-                .with_color(iced::Color::iced_from(look.line_color))
-                .with_width(look.line_width as f32),
+            canvas::Stroke::iced_from(look),
         );
     }
 
-    fn draw_line(&mut self, start: Point, stop: Point, look: &StyleAttr) {}
+    fn draw_line(&mut self, start: Point, stop: Point, look: &StyleAttr) {
+        let start = iced::Point::iced_from(start);
+        let stop = iced::Point::iced_from(stop);
+        self.f.stroke(
+            &canvas::Path::line(start, stop),
+            canvas::Stroke::iced_from(look),
+        )
+    }
 
     fn draw_circle(&mut self, xy: Point, size: Point, look: &StyleAttr) {}
 
