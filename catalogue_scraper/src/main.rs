@@ -1,10 +1,16 @@
 mod requirement_extractor;
+#[cfg(test)]
+mod requirements_tests;
+rustemo::rustemo_mod!(requirements, "/src");
+mod requirements_actions;
 
-use crate::requirement_extractor::extract_requirements;
+use crate::requirement_extractor::extract_requirement_strings;
 use anyhow::{Context, Result};
 use log::{debug, info};
 use rate_limit::UnsyncLimiter;
 use requirement_extractor::RequirementKind;
+use requirements_actions::Expr;
+use rustemo::Parser;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::{stdout, ErrorKind, Write};
@@ -82,20 +88,13 @@ fn main() -> Result<()> {
                 .with_context(|| format!("course meta for {course_link} failed"))?;
             let course_desc = get_course_desc(&course_vdom)
                 .with_context(|| format!("course desc for {course_link} failed"))?;
-            let course_reqs = course_desc
-                .as_deref()
-                .map(|s| {
-                    // Kind of annoying but this will go away soon
-                    extract_requirements(s)
-                        .into_iter()
-                        .map(|(kind, text)| (kind, text.to_owned()))
-                        .collect()
-                })
-                .unwrap_or_default();
+            let desc_or_empty = course_desc.as_deref().unwrap_or_default();
+            let (prereqs, coreqs) = extract_parsed_requirements(desc_or_empty);
             let course_data = CourseData {
                 meta: course_meta,
                 desc: course_desc,
-                reqs: course_reqs,
+                prereqs,
+                coreqs,
             };
             writer.write_all(course_data.to_json_string().as_bytes())?;
             writer.write_all(b"\n")?;
@@ -105,11 +104,41 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+fn extract_parsed_requirements(course_description: &str) -> (Expr, Expr) {
+    let parsed_reqs = extract_requirement_strings(course_description)
+        .into_iter()
+        .filter_map(|(kind, req)| {
+            let parser = requirements::RequirementsParser::new();
+            match parser.parse(req) {
+                Ok(forest) => match forest.get_first_tree() {
+                    Some(tree) => {
+                        let mut builder = requirements::DefaultBuilder::new();
+                        let expr = tree.build(&mut builder);
+                        Some((kind, expr))
+                    }
+                    None => None,
+                },
+                Err(_) => None,
+            }
+        });
+
+    let mut prereqs = Expr::Empty;
+    let mut coreqs = Expr::Empty;
+    for (kind, expr) in parsed_reqs {
+        match kind {
+            RequirementKind::Prerequisite => prereqs = Expr::all(vec![prereqs, expr]),
+            RequirementKind::Corequisite => coreqs = Expr::all(vec![coreqs, expr]),
+        }
+    }
+    (prereqs, coreqs)
+}
+
 #[derive(Debug, Clone)]
 struct CourseData<'a> {
     meta: CourseMeta<'a>,
     desc: Option<Cow<'a, str>>,
-    reqs: Vec<(RequirementKind, String)>,
+    prereqs: Expr,
+    coreqs: Expr,
 }
 
 impl CourseData<'_> {
@@ -132,16 +161,8 @@ impl CourseData<'_> {
             Some(it) => data.string("desc", it),
             None => data.null("desc"),
         };
-        let mut reqs = data.array("reqs");
-        self.reqs.iter().for_each(|(kind, name)| match kind {
-            RequirementKind::Prerequisite => {
-                reqs.object().string("prereq", name);
-            }
-            RequirementKind::Corequisite => {
-                reqs.object().string("coreq", name);
-            }
-        });
-        drop(reqs);
+        self.prereqs.to_json(data.object("prereqs"));
+        self.coreqs.to_json(data.object("coreqs"));
         drop(data);
         buf
     }
