@@ -4,12 +4,11 @@ use graph_layout::core::style::StyleAttr;
 use graph_layout::topo::layout::VisualGraph;
 use iced::advanced::renderer::Quad;
 use iced::advanced::text::Renderer as _;
-use iced::advanced::widget::tree;
-use iced::advanced::{layout, Renderer as _, Text, Widget};
+use iced::advanced::Widget;
 use iced::application::StyleSheet;
-use iced::border::Radius;
+use iced::widget::canvas::{self};
 use iced::widget::text::LineHeight;
-use iced::{Color, Element, Length, Renderer, Size};
+use iced::{Color, Size};
 
 use crate::course_database::CourseDatabase;
 
@@ -23,15 +22,8 @@ enum QueueCommand {
 }
 
 // TODO: Would be good to add a field here so we can take errors.
-struct GraphWidgetRenderContext<'a, Theme: StyleSheet> {
-    graph_widget: &'a GraphWidget<Theme>,
-    tree: &'a tree::Tree,
-    renderer: &'a mut Renderer,
-    theme: &'a Theme,
-    style: &'a iced::advanced::renderer::Style,
-    layout: layout::Layout<'a>,
-    cursor: iced::advanced::mouse::Cursor,
-    viewport: &'a iced::Rectangle,
+struct GraphWidgetRenderContext<'a> {
+    f: &'a mut canvas::Frame,
 }
 
 #[derive(Default)]
@@ -40,6 +32,7 @@ where
     Theme: StyleSheet,
 {
     style: Theme::Style,
+    cache: canvas::Cache,
     course_graph: Option<CourseDatabase>,
 }
 
@@ -73,28 +66,19 @@ impl IcedFrom<Point> for iced::Point {
     }
 }
 
-impl<Theme: StyleSheet> graph_layout::core::format::RenderBackend
-    for GraphWidgetRenderContext<'_, Theme>
-{
+impl graph_layout::core::format::RenderBackend for GraphWidgetRenderContext<'_> {
     fn draw_rect(&mut self, xy: Point, size: Point, look: &StyleAttr, clip: Option<ClipHandle>) {
-        self.renderer.fill_quad(
-            Quad {
-                bounds: iced::Rectangle::new(
-                    iced::Point::iced_from(xy),
-                    iced::Size::iced_from(size),
-                ),
-                border: iced::Border {
-                    radius: clip
-                        .map(|radius_px| Radius::from(radius_px as f32))
-                        .unwrap_or_default(),
-                    width: look.line_width as f32,
-                    color: iced::Color::iced_from(look.line_color),
-                },
-                shadow: iced::Shadow::default(),
-            },
-            look.fill_color
-                .map(iced::Color::iced_from)
-                .unwrap_or(iced::Color::TRANSPARENT),
+        let top_left = iced::Point::iced_from(xy);
+        let size = Size::iced_from(size);
+        if let Some(colour) = look.fill_color {
+            self.f
+                .fill_rectangle(top_left, size, iced::Color::iced_from(colour));
+        }
+        self.f.stroke(
+            &canvas::Path::rectangle(top_left, size),
+            canvas::Stroke::default()
+                .with_color(iced::Color::iced_from(look.line_color))
+                .with_width(look.line_width as f32),
         );
     }
 
@@ -102,32 +86,18 @@ impl<Theme: StyleSheet> graph_layout::core::format::RenderBackend
 
     fn draw_circle(&mut self, xy: Point, size: Point, look: &StyleAttr) {}
 
-    // FIXME: This may
-    // - Fail to draw text
-    // - Draw too large
-    // - Not draw in the boxes
-    // - Draw too small
-    // - Hide part of the text due to clip.
     fn draw_text(&mut self, xy: Point, text: &str, look: &StyleAttr) {
-        let cnt = 1 + text.lines().count();
-        let pos = iced::Point::iced_from(xy);
-        let size = Size::new(text.len() as f32 * 10., (cnt * look.font_size) as f32);
-
-        self.renderer.fill_text(
-            Text {
-                content: text,
-                size: iced::Pixels(look.font_size as f32),
-                shaping: iced::widget::text::Shaping::Advanced,
-                vertical_alignment: iced::alignment::Vertical::Center,
-                horizontal_alignment: iced::alignment::Horizontal::Center,
-                bounds: size,
-                line_height: LineHeight::Relative(0.5),
-                font: iced::Font::DEFAULT,
-            },
-            pos,
-            iced::Color::iced_from(look.line_color),
-            iced::Rectangle::new(pos, size),
-        );
+        self.f.fill_text(canvas::Text {
+            content: text.into(),
+            position: iced::Point::iced_from(xy),
+            color: iced::Color::iced_from(look.line_color),
+            size: iced::Pixels(look.font_size as f32),
+            line_height: LineHeight::Relative(1.0),
+            font: iced::Font::DEFAULT,
+            horizontal_alignment: iced::alignment::Horizontal::Center,
+            vertical_alignment: iced::alignment::Vertical::Center,
+            shaping: iced::widget::text::Shaping::Basic,
+        });
     }
 
     fn draw_arrow(
@@ -146,69 +116,50 @@ impl<Theme: StyleSheet> graph_layout::core::format::RenderBackend
     }
 }
 
-impl<'a, Message, Theme> From<GraphWidget<Theme>> for Element<'a, Message, Theme, Renderer>
-where
-    Theme: StyleSheet + 'a,
-{
-    fn from(value: GraphWidget<Theme>) -> Self {
-        Self::new(value)
-    }
-}
-
-impl<Message, Theme> Widget<Message, Theme, Renderer> for GraphWidget<Theme>
+impl<Message, Theme> canvas::Program<Message, Theme> for GraphWidget<Theme>
 where
     Theme: StyleSheet,
 {
-    fn tag(&self) -> tree::Tag {
-        tree::Tag::of::<State>()
-    }
-
-    fn state(&self) -> tree::State {
-        tree::State::new(State)
-    }
-
-    fn size(&self) -> Size<Length> {
-        Size {
-            width: Length::Fill,
-            height: Length::Fill,
-        }
-    }
-
-    fn layout(
-        &self,
-        _tree: &mut tree::Tree,
-        _renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
-        layout::Node::new(limits.max())
-    }
+    type State = ();
 
     fn draw(
         &self,
-        tree: &tree::Tree,
-        renderer: &mut Renderer,
+        _state: &Self::State,
+        renderer: &iced::Renderer,
         theme: &Theme,
-        style: &iced::advanced::renderer::Style,
-        layout: layout::Layout<'_>,
+        bounds: iced::Rectangle,
         cursor: iced::advanced::mouse::Cursor,
-        viewport: &iced::Rectangle,
-    ) {
+    ) -> Vec<canvas::Geometry> {
         // `VisualGraph::do_it` panics when the graph is empty.
         let Some(ref cg) = self.course_graph else {
-            return;
+            return vec![];
         };
 
-        let mut ctx = GraphWidgetRenderContext {
-            graph_widget: self,
-            tree,
-            renderer,
-            theme,
-            style,
-            layout,
-            cursor,
-            viewport,
-        };
         let mut vg = VisualGraph::new(graph_layout::core::base::Orientation::TopToBottom);
-        vg.do_it(false, false, false, &mut ctx);
+
+        self.cache.draw(renderer, bounds.size(), move |frame| {
+            let mut ctx = GraphWidgetRenderContext { f: frame };
+            vg.do_it(false, false, false, &mut ctx);
+        });
+        vec![]
+    }
+
+    fn update(
+        &self,
+        _state: &mut Self::State,
+        _event: canvas::Event,
+        _bounds: iced::Rectangle,
+        _cursor: iced::advanced::mouse::Cursor,
+    ) -> (canvas::event::Status, Option<Message>) {
+        (canvas::event::Status::Ignored, None)
+    }
+
+    fn mouse_interaction(
+        &self,
+        _state: &Self::State,
+        _bounds: iced::Rectangle,
+        _cursor: iced::advanced::mouse::Cursor,
+    ) -> iced::advanced::mouse::Interaction {
+        iced::advanced::mouse::Interaction::default()
     }
 }
