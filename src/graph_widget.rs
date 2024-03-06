@@ -3,10 +3,12 @@ use graph_layout::core::geometry::Point;
 use graph_layout::core::style::StyleAttr;
 use graph_layout::topo::layout::VisualGraph;
 use iced::advanced::renderer::Quad;
+use iced::advanced::text::Renderer as _;
 use iced::advanced::widget::tree;
-use iced::advanced::{layout, Renderer as _, Widget};
+use iced::advanced::{layout, Renderer as _, Text, Widget};
 use iced::application::StyleSheet;
 use iced::border::Radius;
+use iced::widget::text::LineHeight;
 use iced::{Color, Element, Length, Renderer, Size};
 
 use crate::course_database::CourseDatabase;
@@ -99,7 +101,35 @@ impl<Theme: StyleSheet> graph_layout::core::format::RenderBackend
     fn draw_line(&mut self, start: Point, stop: Point, look: &StyleAttr) {}
 
     fn draw_circle(&mut self, xy: Point, size: Point, look: &StyleAttr) {}
-    fn draw_text(&mut self, xy: Point, text: &str, look: &StyleAttr) {}
+
+    // FIXME: This may
+    // - Fail to draw text
+    // - Draw too large
+    // - Not draw in the boxes
+    // - Draw too small
+    // - Hide part of the text due to clip.
+    fn draw_text(&mut self, xy: Point, text: &str, look: &StyleAttr) {
+        let cnt = 1 + text.lines().count();
+        let pos = iced::Point::iced_from(xy);
+        let size = Size::new(text.len() as f32 * 10., (cnt * look.font_size) as f32);
+
+        self.renderer.fill_text(
+            Text {
+                content: text,
+                size: iced::Pixels(look.font_size as f32),
+                shaping: iced::widget::text::Shaping::Advanced,
+                vertical_alignment: iced::alignment::Vertical::Center,
+                horizontal_alignment: iced::alignment::Horizontal::Center,
+                bounds: size,
+                line_height: LineHeight::Relative(0.5),
+                font: iced::Font::DEFAULT,
+            },
+            pos,
+            iced::Color::iced_from(look.line_color),
+            iced::Rectangle::new(pos, size),
+        );
+    }
+
     fn draw_arrow(
         &mut self,
         path: &[(Point, Point)],
