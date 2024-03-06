@@ -94,10 +94,21 @@ impl graph_layout::core::format::RenderBackend for GraphWidgetRenderContext<'_> 
         self.f.stroke(
             &canvas::Path::line(start, stop),
             canvas::Stroke::iced_from(look),
-        )
+        );
     }
 
-    fn draw_circle(&mut self, xy: Point, size: Point, look: &StyleAttr) {}
+    /// `layout-rs` uses this function to draw ellipses which is why there is a
+    /// size parameter. This is a simple implementation so it'll just draw a
+    /// circle sufficiently big that it would contain the intended ellipse.
+    fn draw_circle(&mut self, xy: Point, size: Point, look: &StyleAttr) {
+        self.f.stroke(
+            &canvas::Path::circle(
+                iced::Point::iced_from(xy),
+                f64::max(size.x, size.y) as f32 / 2.0,
+            ),
+            canvas::Stroke::iced_from(look),
+        );
+    }
 
     fn draw_text(&mut self, xy: Point, text: &str, look: &StyleAttr) {
         self.f.fill_text(canvas::Text {
