@@ -101,8 +101,8 @@ pub enum NodeType {
 
 #[derive(Debug)]
 pub struct Node {
-    ntype: NodeType,
-    val: u16,
+    pub ntype: NodeType,
+    pub val: u16,
 }
 
 impl Node {

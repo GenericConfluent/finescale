@@ -11,11 +11,12 @@ use iced_aw::native::Split;
 use iced_aw::{modal, split, Card};
 
 mod course_database;
-use course_database::{CourseGraph, CourseId};
+use course_database::{CourseGraph, CourseId, NodeType};
 use icons::Icon;
 use petgraph::graph::NodeIndex;
 
 use anyhow::anyhow;
+use petgraph::visit::EdgeRef;
 
 mod graph_widget;
 mod icons;
@@ -24,8 +25,8 @@ mod icons;
 pub struct FinescaleApp {
     // This should be sorted.
     desired_courses: Vec<CourseId>,
-    required_courses: Option<CourseGraph>,
-    course_database: Option<CourseGraph>,
+    required_courses: Option<Vec<CourseId>>,
+    course_graph: Option<CourseGraph>,
     ui_states: UiStates,
 }
 
@@ -59,26 +60,93 @@ async fn load_courses<P: AsRef<std::path::Path>>(path: P) -> Arc<anyhow::Result<
 }
 
 /// `desired` is guaranteed never to be empty and all the node indices are
-/// valid.
-fn select_courses(db: &CourseGraph, desired: &[NodeIndex]) -> anyhow::Result<CourseGraph> {
-    Err(anyhow!("Course selection still needs implementation"))
+/// valid. This impl basically just sets the `val` field on every node
+/// to the number of desired courses that depend on it. Then the `GraphWidget`
+/// and other app logic can select courses according to the following logic:
+///
+/// Every node with a `val > 0 &&` at least one parent with `ntype ==
+/// NodeType::Course` is required.
+///
+/// For nodes with `ntype == NodeType::Or` they must evaluate/collapse to one of
+/// their children, the optimal child that which is already in the required list
+/// or if there is no such child, then the child with the largest `val`.
+fn count_dependents(graph: &mut CourseGraph, desired: &[NodeIndex]) -> anyhow::Result<()> {
+    fn descend(graph: &mut CourseGraph, parent: NodeIndex) {
+        // SAFETY: We only need to mutate the nodes so it's fine to immutable borrow
+        // edge data.
+        unsafe {
+            let graph_ptr: *mut CourseGraph = graph;
+            for edge in graph.courses.edges(parent) {
+                (&mut *graph_ptr).courses[edge.target()].val += graph.courses[parent].val;
+                descend(&mut *graph_ptr, edge.target());
+            }
+        }
+    }
+
+    for idx in desired {
+        graph.courses[*idx].val += 1;
+        descend(graph, *idx);
+    }
+
+    Ok(())
+}
+
+// NOTE: `desired` is not needed here but it elmininates the need to search
+// for the roots. Really in this impl, the `val`s are just used to collapse
+// ors.
+// FIXME: This should be organizing things into course sets. Which have
+// constraints defined between them.
+fn select_courses(graph: &CourseGraph, desired: &[NodeIndex]) -> anyhow::Result<Vec<CourseId>> {
+    let mut required = Vec::with_capacity(desired.len());
+    fn descend(graph: &CourseGraph, required: &mut Vec<CourseId>, parent: NodeIndex) {
+        match &graph.courses[parent].ntype {
+            NodeType::Course(course) => {
+                required.push(course.id.clone());
+                for edge in graph.courses.edges(parent) {
+                    descend(graph, required, edge.target());
+                }
+            }
+            NodeType::Or => {
+                let mut max_val: u16 = 0;
+                let mut max_idx: Option<NodeIndex> = None;
+
+                for edge in graph.courses.edges(parent) {
+                    let val = graph.courses[edge.target()].val;
+                    if val > max_val {
+                        max_val = val;
+                        max_idx = Some(edge.target());
+                    }
+                }
+
+                if let Some(idx) = max_idx {
+                    descend(graph, required, idx);
+                }
+            }
+        }
+    }
+
+    for idx in desired {
+        descend(graph, &mut required, *idx);
+    }
+
+    Ok(required)
 }
 
 impl FinescaleApp {
     fn update_required_courses(&mut self) -> anyhow::Result<()> {
         if self.desired_courses.is_empty() {
-            self.course_database = None;
+            self.course_graph = None;
             return Ok(());
         }
 
-        let db = self
-            .course_database
-            .as_ref()
+        let graph = self
+            .course_graph
+            .as_mut()
             .ok_or(anyhow!("Course database is not yet loaded."))?;
         let mut desired_courses = Vec::with_capacity(self.desired_courses.len());
 
         for course_id in &self.desired_courses {
-            let Some(idx) = db.index_of(course_id) else {
+            let Some(idx) = graph.index_of(course_id) else {
                 self.ui_states.error_modal.push_back(format!(
                     "{} is not in course database. So its requirements will not be accounted for.",
                     course_id
@@ -88,7 +156,8 @@ impl FinescaleApp {
             desired_courses.push(idx);
         }
 
-        self.required_courses = Some(select_courses(db, &desired_courses)?);
+        count_dependents(graph, &desired_courses)?;
+        self.required_courses = Some(select_courses(graph, &desired_courses)?);
         Ok(())
     }
 
@@ -126,7 +195,7 @@ impl Application for FinescaleApp {
             // NOTE: The Arc is just being used to transport the data and allow Clone
             // to be derived on Message.
             Message::LoadedCourses(result_ptr) => match Arc::into_inner(result_ptr) {
-                Some(Ok(db)) => self.course_database = Some(db),
+                Some(Ok(db)) => self.course_graph = Some(db),
                 Some(Err(issue)) => self.ui_states.error_modal.push_back(issue.to_string()),
                 _ => panic!("Read the docs on Message"),
             },
@@ -220,7 +289,12 @@ impl Application for FinescaleApp {
                 .spacing(20)
                 .align_items(iced::Alignment::Center),
             );
-            right = right.push(text(course));
+        }
+
+        if let Some(ref courses) = self.required_courses {
+            for course in courses {
+                right = right.push(text(course));
+            }
         }
 
         let main_content = Split::new(
