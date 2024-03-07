@@ -13,7 +13,7 @@ you're interested give it a try.
 
 ## Features
 - [ ] Scrape the UAlberta catalogue to build a course graph.
-- [ ] Autofill required courses based on a list of desired courses and the course graph.
+- [x] Autofill required courses based on a list of desired courses and the course graph.
 - [ ] Organize required courses into a course set (a collection of classes that could be taken over a semester)
 - [ ] Export course sets to Schedubuddy.
 - [ ] Build a schedule optimized according to certain constraints:
