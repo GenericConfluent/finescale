@@ -94,30 +94,45 @@ impl Course {
 }
 
 #[derive(Debug)]
-pub enum DatabaseNode {
+pub enum NodeType {
     Course(Course),
     Or,
 }
 
-impl DatabaseNode {
+#[derive(Debug)]
+pub struct Node {
+    ntype: NodeType,
+    val: u16,
+}
+
+impl Node {
     fn has_id(&self, id: &CourseId) -> bool {
-        match self {
-            DatabaseNode::Course(course) => course.id == *id,
+        match &self.ntype {
+            NodeType::Course(course) => course.id == *id,
             _ => false,
         }
     }
 }
 
-impl From<Course> for DatabaseNode {
+impl From<Course> for Node {
     fn from(value: Course) -> Self {
-        DatabaseNode::Course(value)
+        Self {
+            ntype: NodeType::Course(value),
+            val: 0,
+        }
     }
 }
 
-impl fmt::Display for DatabaseNode {
+impl From<NodeType> for Node {
+    fn from(ntype: NodeType) -> Self {
+        Self { ntype, val: 0 }
+    }
+}
+
+impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use DatabaseNode::*;
-        match self {
+        use NodeType::*;
+        match &self.ntype {
             Or => write!(f, "OR"),
             Course(c) => write!(f, "{}", c.id),
         }
@@ -127,8 +142,8 @@ impl fmt::Display for DatabaseNode {
 /// Abstraction over some way to retrieve course info for simplicity.
 /// There must only be one entry for each course.
 #[derive(Debug)]
-pub struct CourseDatabase {
-    pub courses: DiGraph<DatabaseNode, Relation>,
+pub struct CourseGraph {
+    pub courses: DiGraph<Node, Relation>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -156,7 +171,7 @@ impl TryFrom<&Requirement> for Relation {
     }
 }
 
-impl CourseDatabase {
+impl CourseGraph {
     pub fn new(source: &str) -> anyhow::Result<Self> {
         // Get list of unique courses sorted
         let mut course_list: Vec<Course> = ron::from_str(source)?;
@@ -168,7 +183,7 @@ impl CourseDatabase {
         let mut edge_queue = Vec::<(NodeIndex, CourseId, Relation)>::new();
 
         fn descend_deptree(
-            courses: &mut DiGraph<DatabaseNode, Relation>,
+            courses: &mut DiGraph<Node, Relation>,
             edge_queue: &mut Vec<(NodeIndex, CourseId, Relation)>,
             node: &NodeIndex,
             requirement: &Requirement,
@@ -176,7 +191,7 @@ impl CourseDatabase {
             match requirement {
                 Requirement::And(req_list) | Requirement::Or(req_list) => {
                     let node = if let Requirement::Or(_) = requirement {
-                        let id = courses.add_node(DatabaseNode::Or);
+                        let id = courses.add_node(NodeType::Or.into());
                         courses.add_edge(*node, id, Relation::Prereq);
                         id
                     } else {
@@ -239,8 +254,8 @@ impl CourseDatabase {
             .courses
             .node_indices()
             .find(|node_idx| self.courses[*node_idx].has_id(id))?;
-        Some(match &self.courses[idx] {
-            DatabaseNode::Course(course) => idx,
+        Some(match &self.courses[idx].ntype {
+            NodeType::Course(course) => idx,
             _ => unreachable!(),
         })
     }
@@ -285,7 +300,7 @@ mod tests {
 ),
 ]"#;
     #[track_caller]
-    fn assert_in_db(db: &CourseDatabase, id: &CourseId) -> NodeIndex {
+    fn assert_in_db(db: &CourseGraph, id: &CourseId) -> NodeIndex {
         let Some(course_idx) = db.index_of(id) else {
             panic!("{} not in the Database", id);
         };
@@ -295,7 +310,7 @@ mod tests {
 
     #[test]
     fn cmput_small() {
-        let db = match CourseDatabase::new(CMPUT_SMALL) {
+        let db = match CourseGraph::new(CMPUT_SMALL) {
             Ok(db) => db,
             Err(err) => panic!("Faild to build CourseDatabase {:?}", err),
         };

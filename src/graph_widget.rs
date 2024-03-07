@@ -8,7 +8,7 @@ use iced::widget::canvas::{self};
 use iced::widget::text::LineHeight;
 use iced::{Color, Size};
 
-use crate::course_database::CourseDatabase;
+use crate::course_database::CourseGraph;
 
 // Think I can stick stuff in this to store widget state.
 // Probably since I don't get a mut reference to the struct itself.
@@ -31,7 +31,7 @@ where
 {
     style: Theme::Style,
     cache: canvas::Cache,
-    course_graph: Option<CourseDatabase>,
+    course_graph: Option<CourseGraph>,
 }
 
 trait IcedFrom<T> {

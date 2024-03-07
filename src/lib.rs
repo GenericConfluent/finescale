@@ -11,7 +11,7 @@ use iced_aw::native::Split;
 use iced_aw::{modal, split, Card};
 
 mod course_database;
-use course_database::{CourseDatabase, CourseId};
+use course_database::{CourseGraph, CourseId};
 use icons::Icon;
 use petgraph::graph::NodeIndex;
 
@@ -24,8 +24,8 @@ mod icons;
 pub struct FinescaleApp {
     // This should be sorted.
     desired_courses: Vec<CourseId>,
-    required_courses: Option<CourseDatabase>,
-    course_database: Option<CourseDatabase>,
+    required_courses: Option<CourseGraph>,
+    course_database: Option<CourseGraph>,
     ui_states: UiStates,
 }
 
@@ -40,7 +40,7 @@ struct UiStates {
 /// put an Arc with a strong refcount != 1 in the variant.
 #[derive(Debug, Clone)]
 pub enum Message {
-    LoadedCourses(Arc<anyhow::Result<CourseDatabase>>),
+    LoadedCourses(Arc<anyhow::Result<CourseGraph>>),
     MainDividerResize(u16),
     CourseInputEvent(String),
     CourseInputSubmit,
@@ -54,13 +54,13 @@ pub enum Message {
 
 // NOTE: May make sense to compress all the files into an archive and
 // download from Github on each startup.
-async fn load_courses<P: AsRef<std::path::Path>>(path: P) -> Arc<anyhow::Result<CourseDatabase>> {
-    CourseDatabase::new("[]").into()
+async fn load_courses<P: AsRef<std::path::Path>>(path: P) -> Arc<anyhow::Result<CourseGraph>> {
+    CourseGraph::new("[]").into()
 }
 
 /// `desired` is guaranteed never to be empty and all the node indices are
 /// valid.
-fn select_courses(db: &CourseDatabase, desired: &[NodeIndex]) -> anyhow::Result<CourseDatabase> {
+fn select_courses(db: &CourseGraph, desired: &[NodeIndex]) -> anyhow::Result<CourseGraph> {
     Err(anyhow!("Course selection still needs implementation"))
 }
 
