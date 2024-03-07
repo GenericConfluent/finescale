@@ -2,7 +2,9 @@ use anyhow::anyhow;
 use core::str::FromStr;
 use petgraph::dot::Dot;
 use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::visit::EdgeRef;
 use serde::Deserialize;
+use std::cmp::Ordering;
 use std::fmt;
 
 #[derive(Deserialize, Clone, Debug)]
@@ -78,6 +80,14 @@ pub struct Course {
     pub requirements: Option<Requirement>,
 }
 
+impl PartialEq for Course {
+    fn eq(&self, other: &Self) -> bool {
+        self.id.eq(&other.id)
+    }
+}
+
+impl Eq for Course {}
+
 impl Course {
     pub fn new(subject_id: &str, class_id: u16, requirements: Option<Requirement>) -> Self {
         let id = CourseId {
@@ -93,7 +103,19 @@ impl Course {
     }
 }
 
-#[derive(Debug)]
+pub enum Dependency {
+    Together,
+    Before,
+    After,
+    Independent,
+}
+
+pub struct CourseSet {
+    /// I refuse to believe anyone is taking more than ten courses in a semester
+    inner: tinyvec::ArrayVec<[NodeIndex; 10]>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum NodeType {
     Course(Course),
     Or,
@@ -260,6 +282,101 @@ impl CourseGraph {
         })
     }
 
+    /// Determins wether `lhs` needs to be in a `CourseSet` before, after,
+    /// together with respect to `rhs`. Alternativly `Dependency::Independent`
+    /// may be returned signifying that they may be placed however.
+    pub fn course_dependency(&self, lhs: NodeIndex, rhs: NodeIndex) -> Dependency {
+        assert_ne!(self.courses[lhs].ntype, NodeType::Or);
+        assert_ne!(self.courses[rhs].ntype, NodeType::Or);
+
+        fn has_descendant(graph: &CourseGraph, parent: NodeIndex, descendant: NodeIndex) -> bool {
+            for edge in graph.courses.edges(parent) {
+                if edge.target() == descendant || has_descendant(graph, edge.target(), descendant) {
+                    return true;
+                }
+            }
+            false
+        }
+
+        // NOTE: This take into account the fact that the `val` on the nodes
+        // may not have been set since by default all `val`s are 0.
+        match self.courses[lhs].val.cmp(&self.courses[rhs].val) {
+            Ordering::Equal | Ordering::Less if has_descendant(self, lhs, rhs) => Dependency::After,
+            Ordering::Equal | Ordering::Greater if has_descendant(self, rhs, lhs) => {
+                Dependency::Before
+            }
+            _ => Dependency::Independent,
+        }
+    }
+
+    /// This is the equivalent of the `CourseGraph::course_dependency` method,
+    /// except for `CourseSet`s. Also the `Dependency::Together` variant does
+    /// not apply to `CourseSet`s so it will never be returned.
+    ///
+    /// WARNING: For efficiency this assumes valid sets. i.e. if there is a
+    /// course in `lhs` that depends on one `rhs` there is not a course in
+    /// `rhs` that depends on on in `lhs`.
+    pub fn set_dependency(&self, lhs: &CourseSet, rhs: &CourseSet) -> Dependency {
+        fn has_anyof_descendants(
+            graph: &CourseGraph,
+            parent: NodeIndex,
+            descendants: &CourseSet,
+        ) -> bool {
+            for edge in graph.courses.edges(parent) {
+                if descendants.inner.contains(&edge.target())
+                    || has_anyof_descendants(graph, edge.target(), descendants)
+                {
+                    return true;
+                }
+            }
+            false
+        }
+
+        for course in lhs.inner {
+            if has_anyof_descendants(self, course, rhs) {
+                return Dependency::After;
+            }
+        }
+
+        for course in rhs.inner {
+            if has_anyof_descendants(self, course, lhs) {
+                return Dependency::Before;
+            }
+        }
+
+        Dependency::Independent
+    }
+
+    /// Will swap two `Course`s if it does not violate their dependencies.
+    /// `true` on success `false` on failure.
+    fn swap_course(
+        &self,
+        lhs: &mut CourseSet,
+        fst: usize,
+        rhs: &mut CourseSet,
+        snd: usize,
+    ) -> bool {
+        match self.course_dependency(lhs.inner[fst], rhs.inner[snd]) {
+            Dependency::Independent => {
+                std::mem::swap(&mut lhs.inner[fst], &mut rhs.inner[snd]);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Will swap two `CourseSet`s if it does not violate dependencies.
+    /// Returning `true` if the swap succeded.
+    fn swap_set(&self, ordered_sets: &mut [CourseSet], fst: usize, snd: usize) -> bool {
+        match self.set_dependency(&ordered_sets[fst], &ordered_sets[snd]) {
+            Dependency::Independent => {
+                ordered_sets.swap(fst, snd);
+                true
+            }
+            _ => false,
+        }
+    }
+
     pub fn to_dot(&self) -> String {
         format!("{}", Dot::new(&self.courses))
     }
@@ -268,7 +385,6 @@ impl CourseGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use petgraph::visit::EdgeRef;
 
     static CMPUT_SMALL: &str = r#"[
 (

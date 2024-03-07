@@ -77,7 +77,7 @@ fn count_dependents(graph: &mut CourseGraph, desired: &[NodeIndex]) -> anyhow::R
         unsafe {
             let graph_ptr: *mut CourseGraph = graph;
             for edge in graph.courses.edges(parent) {
-                (&mut *graph_ptr).courses[edge.target()].val += graph.courses[parent].val;
+                (*graph_ptr).courses[edge.target()].val += graph.courses[parent].val;
                 descend(&mut *graph_ptr, edge.target());
             }
         }

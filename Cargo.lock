@@ -885,6 +885,7 @@ dependencies = [
  "ron",
  "serde",
  "serde_json",
+ "tinyvec",
 ]
 
 [[package]]
