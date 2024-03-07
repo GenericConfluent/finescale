@@ -3,8 +3,6 @@ use graph_layout::core::geometry::Point;
 use graph_layout::core::style::StyleAttr;
 use graph_layout::topo::layout::VisualGraph;
 use iced::advanced::renderer::Quad;
-use iced::advanced::text::Renderer as _;
-use iced::advanced::Widget;
 use iced::application::StyleSheet;
 use iced::widget::canvas::{self};
 use iced::widget::text::LineHeight;
@@ -124,6 +122,10 @@ impl graph_layout::core::format::RenderBackend for GraphWidgetRenderContext<'_> 
         });
     }
 
+    /// `GraphWidget` should not need to draw text to distinguish between
+    /// a prereq and a coreq, so `text` can be ignored.
+    // https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths#curve_commands
+    // https://docs.rs/layout-rs/latest/src/layout/backends/svg.rs.html#227
     fn draw_arrow(
         &mut self,
         path: &[(Point, Point)],
@@ -132,6 +134,50 @@ impl graph_layout::core::format::RenderBackend for GraphWidgetRenderContext<'_> 
         look: &StyleAttr,
         text: &str,
     ) {
+        fn reflect_control(control_b: iced::Point, to: iced::Point) -> iced::Point {
+            iced::Point {
+                x: 2.0 * to.x - control_b.x,
+                y: 2.0 * to.y - control_b.y,
+            }
+        }
+
+        let mut path_iter = path.iter().copied().map(|(control2, line_end)| {
+            (
+                iced::Point::iced_from(control2),
+                iced::Point::iced_from(line_end),
+            )
+        });
+        let stroke = canvas::Stroke {
+            line_dash: if dashed {
+                canvas::LineDash {
+                    segments: &[1.0, 1.0],
+                    offset: 0,
+                }
+            } else {
+                canvas::LineDash::default()
+            },
+            ..canvas::Stroke::iced_from(look)
+        };
+        // use a Builder to add points manually
+        self.f.stroke(
+            &canvas::Path::new(|p| {
+                // "Handle the 'exit vector' from the first point"
+                let first = path_iter.next().unwrap();
+                let second = path_iter.next().unwrap();
+                p.move_to(first.0);
+                p.bezier_curve_to(first.1, second.0, second.1);
+
+                // "Handle the 'entry vector' from the rest of the points"
+                // Here we need to mimic the svg S command and mirror control_b
+                // to use it as the next control_a
+                let mut control_a = reflect_control(second.0, second.1);
+                for (control_b, to) in path_iter {
+                    p.bezier_curve_to(control_a, control_b, to);
+                    control_a = reflect_control(control_b, to);
+                }
+            }),
+            stroke,
+        );
     }
 
     // Funny hack
