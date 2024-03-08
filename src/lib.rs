@@ -14,10 +14,8 @@ use iced_aw::{modal, split, Card};
 mod course_database;
 use course_database::{CourseGraph, CourseId, CourseSet, NodeType};
 use icons::Icon;
-use petgraph::graph::NodeIndex;
 
 use anyhow::anyhow;
-use petgraph::visit::EdgeRef;
 
 mod graph_widget;
 mod icons;
@@ -60,38 +58,6 @@ async fn load_courses<P: AsRef<std::path::Path>>(path: P) -> Arc<anyhow::Result<
     CourseGraph::new("[]").into()
 }
 
-/// `desired` is guaranteed never to be empty and all the node indices are
-/// valid. This impl basically just sets the `val` field on every node
-/// to the number of desired courses that depend on it. Then the `GraphWidget`
-/// and other app logic can select courses according to the following logic:
-///
-/// Every node with a `val > 0 &&` at least one parent with `ntype ==
-/// NodeType::Course` is required.
-///
-/// For nodes with `ntype == NodeType::Or` they must evaluate/collapse to one of
-/// their children, the optimal child that which is already in the required list
-/// or if there is no such child, then the child with the largest `val`.
-fn count_dependents(graph: &mut CourseGraph, desired: &[NodeIndex]) -> anyhow::Result<()> {
-    fn descend(graph: &mut CourseGraph, parent: NodeIndex) {
-        // SAFETY: We only need to mutate the nodes so it's fine to immutable borrow
-        // edge data.
-        unsafe {
-            let graph_ptr: *mut CourseGraph = graph;
-            for edge in graph.courses.edges(parent) {
-                (*graph_ptr).courses[edge.target()].val += graph.courses[parent].val;
-                descend(&mut *graph_ptr, edge.target());
-            }
-        }
-    }
-
-    for idx in desired {
-        graph.courses[*idx].val += 1;
-        descend(graph, *idx);
-    }
-
-    Ok(())
-}
-
 impl FinescaleApp {
     fn update_required_courses(&mut self) -> anyhow::Result<()> {
         if self.desired_courses.is_empty() {
@@ -116,7 +82,7 @@ impl FinescaleApp {
             desired_courses.push(idx);
         }
 
-        count_dependents(graph, &desired_courses)?;
+        graph.count_dependents(&desired_courses)?;
         self.required_courses = graph.build_sets(&desired_courses, 5);
         Ok(())
     }

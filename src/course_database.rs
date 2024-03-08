@@ -378,6 +378,40 @@ impl CourseGraph {
         }
     }
 
+    /// `desired` is guaranteed never to be empty and all the node indices are
+    /// valid. This impl basically just sets the `val` field on every node
+    /// to the number of desired courses that depend on it. Then the
+    /// `GraphWidget` and other app logic can select courses according to
+    /// the following logic:
+    ///
+    /// Every node with a `val > 0 &&` at least one parent with `ntype ==
+    /// NodeType::Course` is required.
+    ///
+    /// For nodes with `ntype == NodeType::Or` they must evaluate/collapse to
+    /// one of their children, the optimal child that which is already in
+    /// the required list or if there is no such child, then the child with
+    /// the largest `val`.
+    pub fn count_dependents(&mut self, desired: &[NodeIndex]) -> anyhow::Result<()> {
+        fn descend(graph: &mut CourseGraph, parent: NodeIndex) {
+            // SAFETY: We only need to mutate the nodes so it's fine to immutable borrow
+            // edge data.
+            unsafe {
+                let graph_ptr: *mut CourseGraph = graph;
+                for edge in graph.courses.edges(parent) {
+                    (*graph_ptr).courses[edge.target()].val += graph.courses[parent].val;
+                    descend(&mut *graph_ptr, edge.target());
+                }
+            }
+        }
+
+        for idx in desired {
+            self.courses[*idx].val += 1;
+            descend(self, *idx);
+        }
+
+        Ok(())
+    }
+
     pub fn build_sets(&self, desired: &[NodeIndex], set_capacity: usize) -> Vec<CourseSet> {
         let mut sets = Vec::new();
 
