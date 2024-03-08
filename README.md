@@ -1,20 +1,20 @@
 # Finescale&mdash;A finer scale understanding of your schedule
 ### &#128679; Under construction. Will be finished alongside LRT and other construction :) &#128679; &Rightarrow; Submit a pull request.
 Are you annoyed needing to spend time going through the UofA course catalogue
-looking through prerequisites, corequisites, descriptions, and course times? It's
-a necessary activity to build an understanding of which courses you want and need
-to complete your program, even more so in the case of an honours student looking
-to build their schedule. 
+looking through prerequisites, corequisites, descriptions, and course times?
+It's a necessary activity to build an understanding of which courses you want
+and need to complete your program, even more so in the case of an honours
+student looking to build their schedule.
 
 I'm certainly tired, so I wrote this simple app to hopefully make it somewhat
 easier for people to select their courses. I can't promise that you will for
-sure find this tool useful, but I promise it's not malware. If
-you're interested give it a try.
+sure find this tool useful, but I promise it's not malware. If you're interested
+give it a try.
 
 ## Features
 - [ ] Scrape the UAlberta catalogue to build a course graph.
 - [x] Autofill required courses based on a list of desired courses and the course graph.
-- [ ] Organize required courses into a course set (a collection of classes that could be taken over a semester)
+- [x] Organize required courses into a course set (a collection of classes that could be taken over a semester)
 - [ ] Export course sets to Schedubuddy.
 - [ ] Build a schedule optimized according to certain constraints:
   - [ ] The order and position of their classes to minimize walking time.
