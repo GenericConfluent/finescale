@@ -110,9 +110,10 @@ pub enum Dependency {
     Independent,
 }
 
+#[derive(Default)]
 pub struct CourseSet {
     /// I refuse to believe anyone is taking more than ten courses in a semester
-    inner: tinyvec::ArrayVec<[NodeIndex; 10]>,
+    pub inner: tinyvec::ArrayVec<[NodeIndex; 10]>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -349,7 +350,7 @@ impl CourseGraph {
 
     /// Will swap two `Course`s if it does not violate their dependencies.
     /// `true` on success `false` on failure.
-    fn swap_course(
+    pub fn swap_course(
         &self,
         lhs: &mut CourseSet,
         fst: usize,
@@ -367,7 +368,7 @@ impl CourseGraph {
 
     /// Will swap two `CourseSet`s if it does not violate dependencies.
     /// Returning `true` if the swap succeded.
-    fn swap_set(&self, ordered_sets: &mut [CourseSet], fst: usize, snd: usize) -> bool {
+    pub fn swap_set(&self, ordered_sets: &mut [CourseSet], fst: usize, snd: usize) -> bool {
         match self.set_dependency(&ordered_sets[fst], &ordered_sets[snd]) {
             Dependency::Independent => {
                 ordered_sets.swap(fst, snd);
@@ -375,6 +376,68 @@ impl CourseGraph {
             }
             _ => false,
         }
+    }
+
+    pub fn build_sets(&self, desired: &[NodeIndex], set_capacity: usize) -> Vec<CourseSet> {
+        let mut sets = Vec::new();
+
+        fn add_courses(
+            graph: &CourseGraph,
+            sets: &mut Vec<CourseSet>,
+            capacity: usize,
+            depth: &mut usize,
+            node: NodeIndex,
+        ) {
+            if sets.len() == *depth {
+                sets.push(CourseSet::default());
+            }
+            match graph.courses[node].ntype {
+                NodeType::Course(_) => {
+                    if sets[*depth].inner.len() >= capacity {
+                        sets.push(CourseSet::default());
+                        *depth += 1;
+                    }
+                    sets[*depth].inner.push(node);
+                    for edge in graph.courses.edges(node) {
+                        match *edge.weight() {
+                            Relation::Prereq => {
+                                *depth += 1;
+                                add_courses(graph, sets, capacity, depth, edge.target());
+                                *depth -= 1;
+                            }
+                            Relation::Coreq => {
+                                // FIXME: It is possible for this to fail when the `CourseSet`
+                                // at `depth` we want to root the Coreq at is at capacity.
+                                add_courses(graph, sets, capacity, depth, edge.target());
+                            }
+                        }
+                    }
+                }
+                NodeType::Or => {
+                    let mut max_val = 0;
+                    let mut max_idx = None;
+
+                    for course in graph.courses.edges(node) {
+                        let choice = course.target();
+                        if graph.courses[choice].val > max_val {
+                            max_val = graph.courses[choice].val;
+                            max_idx = Some(choice);
+                        }
+                    }
+
+                    if let Some(idx) = max_idx {
+                        add_courses(graph, sets, capacity, depth, idx);
+                    }
+                }
+            }
+        }
+
+        for course in desired {
+            let mut depth = 0;
+            add_courses(self, &mut sets, set_capacity, &mut depth, *course);
+        }
+
+        sets
     }
 
     pub fn to_dot(&self) -> String {

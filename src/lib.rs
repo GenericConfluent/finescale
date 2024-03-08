@@ -1,5 +1,6 @@
 #![allow(dead_code, unused_variables)]
 
+use core::panic;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use iced_aw::native::Split;
 use iced_aw::{modal, split, Card};
 
 mod course_database;
-use course_database::{CourseGraph, CourseId, NodeType};
+use course_database::{CourseGraph, CourseId, CourseSet, NodeType};
 use icons::Icon;
 use petgraph::graph::NodeIndex;
 
@@ -25,7 +26,7 @@ mod icons;
 pub struct FinescaleApp {
     // This should be sorted.
     desired_courses: Vec<CourseId>,
-    required_courses: Option<Vec<CourseId>>,
+    required_courses: Vec<CourseSet>,
     course_graph: Option<CourseGraph>,
     ui_states: UiStates,
 }
@@ -91,47 +92,6 @@ fn count_dependents(graph: &mut CourseGraph, desired: &[NodeIndex]) -> anyhow::R
     Ok(())
 }
 
-// NOTE: `desired` is not needed here but it elmininates the need to search
-// for the roots. Really in this impl, the `val`s are just used to collapse
-// ors.
-// FIXME: This should be organizing things into course sets. Which have
-// constraints defined between them.
-fn select_courses(graph: &CourseGraph, desired: &[NodeIndex]) -> anyhow::Result<Vec<CourseId>> {
-    let mut required = Vec::with_capacity(desired.len());
-    fn descend(graph: &CourseGraph, required: &mut Vec<CourseId>, parent: NodeIndex) {
-        match &graph.courses[parent].ntype {
-            NodeType::Course(course) => {
-                required.push(course.id.clone());
-                for edge in graph.courses.edges(parent) {
-                    descend(graph, required, edge.target());
-                }
-            }
-            NodeType::Or => {
-                let mut max_val: u16 = 0;
-                let mut max_idx: Option<NodeIndex> = None;
-
-                for edge in graph.courses.edges(parent) {
-                    let val = graph.courses[edge.target()].val;
-                    if val > max_val {
-                        max_val = val;
-                        max_idx = Some(edge.target());
-                    }
-                }
-
-                if let Some(idx) = max_idx {
-                    descend(graph, required, idx);
-                }
-            }
-        }
-    }
-
-    for idx in desired {
-        descend(graph, &mut required, *idx);
-    }
-
-    Ok(required)
-}
-
 impl FinescaleApp {
     fn update_required_courses(&mut self) -> anyhow::Result<()> {
         if self.desired_courses.is_empty() {
@@ -157,7 +117,7 @@ impl FinescaleApp {
         }
 
         count_dependents(graph, &desired_courses)?;
-        self.required_courses = Some(select_courses(graph, &desired_courses)?);
+        self.required_courses = graph.build_sets(&desired_courses, 5);
         Ok(())
     }
 
@@ -291,9 +251,22 @@ impl Application for FinescaleApp {
             );
         }
 
-        if let Some(ref courses) = self.required_courses {
-            for course in courses {
-                right = right.push(text(course));
+        if let Some(ref graph) = self.course_graph {
+            for (idx, set) in self.required_courses.iter().rev().enumerate() {
+                if idx > 0 {
+                    right = right.push(horizontal_rule(2));
+                }
+                for course in set.inner {
+                    match graph.courses[course].ntype {
+                        NodeType::Or => panic!(
+                            "Logic error, the following node was in a `CourseSet`:\n{:?}",
+                            graph.courses[course]
+                        ),
+                        NodeType::Course(ref course) => {
+                            right = right.push(text(course.id.clone()));
+                        }
+                    }
+                }
             }
         }
 
