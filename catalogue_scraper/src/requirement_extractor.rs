@@ -8,7 +8,7 @@ pub enum RequirementKind {
     Corequisite,
 }
 
-pub fn extract_requirements(s: &str) -> Vec<(RequirementKind, &str)> {
+pub fn extract_requirement_strings(s: &str) -> Vec<(RequirementKind, &str)> {
     const NO_PREREQUISITE_REGEX: &str = r"(?x)(?i)
         no \s (?<kind>pre-?requisite) ((\(s\)) | s)?
     ";
@@ -118,7 +118,7 @@ mod tests {
 
     #[track_caller]
     fn check_no_requirements(s: &str) {
-        let results = extract_requirements(s);
+        let results = extract_requirement_strings(s);
         assert_eq!(results, []);
     }
 
@@ -134,7 +134,7 @@ mod tests {
 
     #[track_caller]
     fn check_requirement(s: &str, requirement_kind: RequirementKind, output: Expect) {
-        let results = extract_requirements(s);
+        let results = extract_requirement_strings(s);
         let &[(result_kind, result_text)] = results.as_slice() else {
             panic!("Wanted one requirement: {results:?}, {s:?}")
         };
@@ -145,7 +145,7 @@ mod tests {
     #[track_caller]
     fn check_requirements(s: &str, output: Expect) {
         let mut out = String::new();
-        for (kind, text) in extract_requirements(s) {
+        for (kind, text) in extract_requirement_strings(s) {
             writeln!(&mut out, "{kind:?}: {text:?}").unwrap();
         }
         output.assert_eq(&out);
