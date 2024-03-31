@@ -1,8 +1,12 @@
-TopLevel: Any1 | TopLevelList | None;
+TopLevel: Any1 | TopLevelSemicolonList | TopLevelCommaList | None;
 
-TopLevelList: Any1 TopLevelListElement* TopLevelListLastElement?;
-TopLevelListElement: ',' Any1;
-TopLevelListLastElement: ',' AndEt Any1;
+TopLevelSemicolonList: Any1 TopLevelSemicolonListElement* TopLevelSemicolonListLastElement?;
+TopLevelSemicolonListElement: ';' Any1;
+TopLevelSemicolonListLastElement: ';' AndEt Any1;
+
+TopLevelCommaList: Any1 TopLevelCommaListElement* TopLevelCommaListLastElement?;
+TopLevelCommaListElement: ',' Any1;
+TopLevelCommaListLastElement: ',' AndEt Any1;
 
 Any1: AllCoursesSharedTopic
     | AllCourses
@@ -17,8 +21,11 @@ Any2: AnyCoursesSharedTopic
     | Any3;
 
 Any3: Course
+    | EitherCourse
+    | AnyCoursesSharedTopicNoCommas
     | CoursesSharedTopicSlashList
-    | Alternative;
+    | Alternative
+    | AMinimumGradeIn Any1;
 
 Any3Like: Any3
         | EnOrAlternativeOption;
@@ -38,6 +45,7 @@ CommaOptOr: CommaOrSemicolon? OrOu;
 
 AllCourses: Both? CommaSeparatedCourses2 CommaOptAnd Any2;
 AnyCourses: OneOf? CommaSeparatedCourses3 CommaOptOr Any3Like;
+EitherCourse: Either? Any3 OrOu Any3;
 
 CommaSeparatedCourses2: Any2 CommaSeparatedCoursesElement2*;
 CommaSeparatedCoursesElement2: CommaOrSemicolon Any2;
@@ -47,13 +55,16 @@ CommaSeparatedCoursesElement3: CommaOrSemicolon Any3;
 
 AllCoursesSharedTopic: Both? CoursesSharedTopicHead CommaOptAnd number=Number;
 AnyCoursesSharedTopic: OneOf? CoursesSharedTopicHead CommaOptOr number=Number
-                     | OneOf CoursesSharedTopicHead;
+                     | OneOf CoursesSharedTopicHead
+                     | OneOf? CoursesSharedTopicHead CommaOrSemicolon? OrAlternative;
 
 CoursesSharedTopicHead: topic=Topic number=Number CoursesSharedTopicHeadElement*;
 CoursesSharedTopicHeadElement: CommaOrSemicolon number=Number;
 
 CoursesSharedTopicSlashList: topic=Topic number=Number CoursesSharedTopicSlashListElement+;
 CoursesSharedTopicSlashListElement: Slash number=Number;
+
+AnyCoursesSharedTopicNoCommas: OneOf? CoursesSharedTopicHead;
 
 CommaOrSemicolon: ',' | ';';
 
@@ -65,8 +76,10 @@ Number: /\d+/;
 Topic: /(ZOOLE|ZOOL|WRS|WRITE|WKEXP|WGS|UNIV|UKR|THES|T DES|TAATC|TAARH|TAAMK|TAAMG|TAAFI|TAACO|SWED|SUST|SURG|STS|STATQ|STAT|SPRIT|SPH|SPAN|SOCIE|SOC|SLAV|SEM|SCSP|SCSOC|SC PO|SC INF|SCI|SCAND|SANSK|RUSS|R SOC|RSCH|RLS|REN R|RELIG|REHAB|RADTH|RADDI|PUNJ|PTHER|PSYCI|PSYCH|PSYCE|PSSTC|PORT|POLSH|POL S|PMCOL|PL SC|PLAN|PHYSQ|PHYSL|PHYSE|PHYS|PHILE|PHIL|PHARM|PGME|PGDE|PET E|PALEO|PAED|PAC|OPHTH|ONCOL|OM|OCCTH|OBIOL|OB GY|NUTR|NURS|NU FS|NS|NORW|NORSE|NEURO|NANO|MUSIQ|MUSIC|MST|M REG|MMI|MM|MLSCI|MLCS|MINT|MIN E|MICRE|MICRB|MGTSC|M EDU|MED|MEC E|MEAS|MDGEN|MATHQ|MATH|MAT E|MA SC|MARK|MA PH|MAFSJ|MACE|LITT|LIS|LINGQ|LING|LAW|LATIN|LA ST|LABMP|KSR|KRLS|KOREA|KIN|JAPAN|ITAL|IRISH|IPG|INT D|INFOR|IMINE|IMIN|HUME|HISTE|HIST|HINDI|HGEO|HE ED|HECOL|HEBR|HADVC|GTOTC|GSJ|GREEK|GERM|GEOPH|GENET|GENEQ|FS|FREN|FR ED|FRANC|FOREC|FOLK|F MED|FIN|EXT|EXSPH|EXSM|EXSDP|EXSCMA|EXRI|EXPH|EXOS|EXOPT|EXNS|EXMGT|EXLUP|EXLGP|EXLDR|EXIIC|EXIAPP|EXGL|EXGEN|EXFRM|EXERM|EXEN|EXELP|EXCST|EXCPE|EXCH|EXBA|EXASB|EXART|EXARE|EXALES|EXAGC|ET RE|ETIN|ETCAN|ESPA|EPE|ENV E|ENT|EN PH|ENG M|ENGL|ENGG|ENCS|ENCMP|EDU S|EDU P|EDU M|EDU F|EDU|EDSE|EDPY|EDPS|EDIT|EDHS|EDFX|EDES|EDEL|EDCT|ECONE|ECON|ECE|EASIA|EAS|EAP|E E|DRAMA|D HYG|DH|DEVDU|DES|DENT|DDS|DANCE|DAC|DA|CSL|CSD|COMM|CMPUT|CME|C LIT|CLASS|CIV E|CHRTP|CHRTC|CHINA|CHIM|CHEM|CH E|CELL|CEDUL|CCALS|CATS|BUS|BUEC|BTM|BOT|BME|B LAW|BIOPH|BIOLE|BIOL|BIOIN|BIOEN|BIOCM|BIOCH|AUSTA|AUSSC|AUSPA|AUSOC|AUSCI|AUSCA|AUREL|AUPSY|AUPOL|AUPHY|AUPHI|AUPED|AUPAC|AUMUS|AUMGT|AUMAT|AULAT|AULAN|AUIND|AUIDS|AUHUM|AUHIS|AUGER|AUGEO|AUGDS|AUFRE|AUFAR|AUEPS|AUENV|AUENG|AUEFX|AUEDC|AUECO|AUEAP|AUDRA|AUCSL|AUCSC|AUCRI|AUCLA|AUCHE|AUBIO|AUART|AUACC|ASTRO|ASL|ARTE|ART|AREC|ARAB|ANTHR|ANTHE|AN SC|ANGL|ANDR|ANATE|ANAT|ALS|ALES|AGRMT|AFNS|ADRAM|ADMI|ACCTG|ABROD)/;
 OneOf: /(?i)((one|any) of|un parmi):?/;
 Both: /(?i)both/;
+Either: /(?i)either/;
+AMinimumGradeIn: /(?i)a minimum grade of [A-Z][+-]? in/;
 Alternative: /(?i)(department(al)? consent|consent of( the)? (instructor|department( chair)?|faculty|program))/;
-EnOrAlternativeOption: /(?i)(equivalent|department(al)? consent|consent (of|from)( the)? (instructor|department( chair)?|faculty|program|course coordinators?))/;
+EnOrAlternativeOption: /(?i)(equivalent|department(al)? consent|consent (of|from)( the)? (instructor|department( chair)?|faculty|program|course coordinators?|college))/;
 EnUnlessAlternativeOption: /(?i)(waived by instructor)/;
 FrOrAlternativeOption: /(?i)(équivalent)/;
 Comma: ',';

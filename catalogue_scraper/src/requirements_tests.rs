@@ -280,7 +280,7 @@ fn misc_working() {
         "CMPUT 204, one of CMPUT 229, E E 380 or ECE 212 and one of MATH 225, 227, or 228 or \
          consent of the instructor",
         expect![
-            "(all (CMPUT 204) (any (CMPUT 229) (E E 380) (ECE 212)) (any (MATH 225) (MATH 227) \
+            "(all (any (CMPUT 204) (CMPUT 229) (E E 380) (ECE 212)) (any (MATH 225) (MATH 227) \
              (MATH 228)))"
         ],
     );
@@ -302,44 +302,90 @@ fn misc_working() {
              (PHYS 144)) (EN PH 131))"
         ],
     );
+    check(
+        "AUCSC 112, or AUCSC 211 or AUSCI 235",
+        expect!["(any (AUCSC 112) (any (AUCSC 211) (AUSCI 235)))"],
+    );
+    check(
+        "CMPUT 174, 274 or consent of the instructor",
+        expect!["(any (CMPUT 174) (CMPUT 274))"],
+    );
+    check(
+        "FIN 201 or 301, and a minimum grade of C- in ACCTG 314 or 414",
+        expect!["(all (any (FIN 201) (FIN 301)) (any (ACCTG 314) (ACCTG 414)))"],
+    );
+    check(
+        "ACCTG 414 or 412; FIN 301",
+        expect!["(all (any (ACCTG 414) (ACCTG 412)) (FIN 301))"],
+    );
+    check(
+        "CMPUT 174 or 274; one of MATH 100, 114, 117, 134, 144, or 154",
+        expect![
+            "(all (any (CMPUT 174) (CMPUT 274)) (any (MATH 100) (MATH 114) (MATH 117) (MATH 134) \
+             (MATH 144) (MATH 154)))"
+        ],
+    );
+    check(
+        "CMPUT 101, 174, 175, 274, or SCI 100",
+        expect!["(any (any (CMPUT 101) (CMPUT 174) (CMPUT 175) (CMPUT 274)) (SCI 100))"],
+    );
+    check(
+        "CMPUT 204 and 267; one of MATH 115, 118, 136, 146, or 156",
+        expect![
+            "(all (all (CMPUT 204) (CMPUT 267)) (any (MATH 115) (MATH 118) (MATH 136) (MATH 146) \
+             (MATH 156)))"
+        ],
+    );
+    check(
+        "CMPUT 204 or 275; MATH 125; CMPUT 267 or MATH 214; or consent of the instructor",
+        expect![
+            "(all (any (CMPUT 204) (CMPUT 275)) (any (MATH 125) (any (CMPUT 267) (MATH 214))))"
+        ],
+    );
+
+    check(
+        "CMPUT 115 or 175; one of MATH 100, 113, 114, 117, 134, 144, 154; MATH 125; STAT 141, 151 \
+         or 235",
+        expect![
+            "(all (any (CMPUT 115) (CMPUT 175)) (any (MATH 100) (MATH 113) (MATH 114) (MATH 117) \
+             (MATH 134) (MATH 144) (MATH 154)) (MATH 125) (any (STAT 141) (STAT 151) (STAT 235)))"
+        ],
+    );
+    check(
+        "CMPUT 175 or 275 and CMPUT 272; one of MATH 100, 113, 114, 117, 134, 144, 154, or SCI 100",
+        expect![
+            "(all (any (CMPUT 175) (CMPUT 275)) (any (CMPUT 272) (any (MATH 100) (MATH 113) (MATH \
+             114) (MATH 117) (MATH 134) (MATH 144) (MATH 154)) (SCI 100)))"
+        ],
+    );
+    check(
+        "CMPUT 201 or 275; one of CMPUT 229, E E 380 or ECE 212",
+        expect!["(all (any (CMPUT 201) (CMPUT 275)) (any (CMPUT 229) (E E 380) (ECE 212)))"],
+    );
 }
 
 #[test]
 fn misc_broken() {
     check(
-        "AUCSC 112, or AUCSC 211 or AUSCI 235",
+        "AUCSC 120, AUMAT 110 or 111 or 116, and AUMAT 120",
         expect![[r#"
-            Error: Error at <str>:[1,27]:
-            	...r AUCSC 211 or -->AUSCI 235...
+            Error: Error at <str>:[1,31]:
+            	... 110 or 111 or -->116, and AUMAT ...
             	Expected EnOrAlternativeOption."#]],
-    );
-    check(
-        "CMPUT 174, 274 or consent of the instructor",
-        expect![[r#"
-            Error: Error at <str>:[1,18]:
-            	...UT 174, 274 or -->consent of the ...
-            	Expected one of Number, Topic, Alternative, EnOrAlternativeOption."#]],
     );
     check(
         "French 30 ou l'équivalent, ou FRANC 101 ou FREN 100 ou 111/112",
         expect![[r#"
             Error: Error at <str>:[1,0]:
             	...-->French 30 ou l'...
-            	Expected one of Topic, OneOf, Both, Alternative, None."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, None."#]],
     );
     check(
         "CMPUT 174 or 274, or consent of the instructor",
         expect![[r#"
             Error: Error at <str>:[1,18]:
             	...UT 174 or 274, -->or consent of t...
-            	Expected one of Topic, OneOf, Both, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
-    );
-    check(
-        "CMPUT 175 or 275 and CMPUT 272; one of MATH 100, 113, 114, 117, 134, 144, 154, or SCI 100",
-        expect![[r#"
-            Error: Error at <str>:[1,32]:
-            	...and CMPUT 272; -->one of MATH 100...
-            	Expected one of Number, Topic, OneOf, Alternative, AndOr, And, Et, Or, Ou."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
     );
     check(
         "Any introductory-level Computing Science course, plus knowledge of introductory-level \
@@ -347,35 +393,28 @@ fn misc_broken() {
         expect![[r#"
             Error: Error at <str>:[1,0]:
             	...-->Any introductor...
-            	Expected one of Topic, OneOf, Both, Alternative, None."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, None."#]],
     );
     check(
         "Any 100-level course",
         expect![[r#"
             Error: Error at <str>:[1,0]:
             	...-->Any 100-level c...
-            	Expected one of Topic, OneOf, Both, Alternative, None."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, None."#]],
     );
     check(
         "Second-year standing",
         expect![[r#"
             Error: Error at <str>:[1,0]:
             	...-->Second-year sta...
-            	Expected one of Topic, OneOf, Both, Alternative, None."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, None."#]],
     );
     check(
         "one of STAT 141, 151, 235, or 265, or SCI 151",
         expect![[r#"
             Error: Error at <str>:[1,35]:
             	..., 235, or 265, -->or SCI 151...
-            	Expected one of Topic, OneOf, Both, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
-    );
-    check(
-        "CMPUT 174 or 274; one of MATH 100, 114, 117, 134, 144, or 154",
-        expect![[r#"
-            Error: Error at <str>:[1,61]:
-            	...34, 144, or 154-->...
-            	Expected one of STOP, Comma, Semicolon, AndOr, And, Et, Or, Ou, Unless."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
     );
     check(
         "CMPUT 175 or 275; CMPUT 272; MATH 125 or 127; one of STAT 141, 151, 235, or 265, or SCI \
@@ -383,35 +422,28 @@ fn misc_broken() {
         expect![[r#"
             Error: Error at <str>:[1,81]:
             	..., 235, or 265, -->or SCI 151...
-            	Expected one of Number, Topic, OneOf, Alternative, AndOr, And, Et, Or, Ou."#]],
-    );
-    check(
-        "CMPUT 101, 174, 175, 274, or SCI 100",
-        expect![[r#"
-        Error: Error at <str>:[1,29]:
-        	..., 175, 274, or -->SCI 100...
-        	Expected one of Number, Topic, Alternative, EnOrAlternativeOption."#]],
+            	Expected one of Number, Topic, OneOf, Either, AMinimumGradeIn, Alternative, AndOr, And, Et, Or, Ou."#]],
     );
     check(
         "Math 30 or 31",
         expect![[r#"
             Error: Error at <str>:[1,0]:
             	...-->Math 30 or 31...
-            	Expected one of Topic, OneOf, Both, Alternative, None."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, None."#]],
     );
     check(
         "CMPUT 175 or 274, and 272",
         expect![[r#"
             Error: Error at <str>:[1,22]:
             	...75 or 274, and -->272...
-            	Expected one of Number, Topic, OneOf, Both, Alternative."#]],
+            	Expected one of Number, Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative."#]],
     );
     check(
         "Any introductory-level Computing Science course or SCI 100, and any 200-level course",
         expect![[r#"
             Error: Error at <str>:[1,0]:
             	...-->Any introductor...
-            	Expected one of Topic, OneOf, Both, Alternative, None."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, None."#]],
     );
     check(
         "CMPUT 204; one of STAT 141, 151, 235 or 265 or SCI 151; one of MATH 225, 227, 228; or \
@@ -426,21 +458,21 @@ fn misc_broken() {
         expect![[r#"
             Error: Error at <str>:[1,31]:
             	..., 308, or 411; -->or consent of t...
-            	Expected one of Number, Topic, OneOf, Alternative, AndOr, And, Et, Or, Ou."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
     );
     check(
         "CMPUT 201, 206, MATH 125 or 127, STAT 151 or 265, or consent of the instructor",
         expect![[r#"
-            Error: Error at <str>:[1,16]:
-            	...MPUT 201, 206, -->MATH 125 or 127...
-            	Expected one of Number, Topic, OneOf, Alternative, AndOr, And, Et, Or, Ou."#]],
+            Error: Error at <str>:[1,50]:
+            	...AT 151 or 265, -->or consent of t...
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
     );
     check(
         "CMPUT 340 or 418, or ECE 240",
         expect![[r#"
             Error: Error at <str>:[1,18]:
             	...UT 340 or 418, -->or ECE 240...
-            	Expected one of Topic, OneOf, Both, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
     );
     check(
         "CMPUT 201 and 204 or 275; one of CMPUT 229, E E 380 or ECE 212; and STAT 252 or 266",
@@ -457,61 +489,46 @@ fn misc_broken() {
             	Expected EnOrAlternativeOption."#]],
     );
     check(
-        "CMPUT 115 or 175; one of MATH 100, 113, 114, 117, 134, 144, 154; MATH 125; STAT 141, 151 \
-         or 235",
-        expect![[r#"
-            Error: Error at <str>:[1,95]:
-            	...141, 151 or 235-->...
-            	Expected one of STOP, Comma, Semicolon, AndOr, And, Et, Or, Ou, Unless."#]],
-    );
-    check(
         "CMPUT 204 or 275; MATH 125, 214; one of STAT 141, 151, 235 or 265 or SCI 151",
         expect![[r#"
-            Error: Error at <str>:[1,33]:
-            	...MATH 125, 214; -->one of STAT 141...
-            	Expected one of Number, Topic, OneOf, Alternative, AndOr, And, Et, Or, Ou."#]],
+            Error: Error at <str>:[1,69]:
+            	... 235 or 265 or -->SCI 151...
+            	Expected EnOrAlternativeOption."#]],
     );
     check(
         "CMPUT 201 or 275, and 204",
         expect![[r#"
             Error: Error at <str>:[1,22]:
             	...01 or 275, and -->204...
-            	Expected one of Number, Topic, OneOf, Both, Alternative."#]],
+            	Expected one of Number, Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative."#]],
     );
     check(
         "any 200-level Computing Science course",
         expect![[r#"
             Error: Error at <str>:[1,0]:
             	...-->any 200-level C...
-            	Expected one of Topic, OneOf, Both, Alternative, None."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, None."#]],
     );
     check(
         "CMPUT 175 or 275; one of CMPUT 267, 466, or STAT 265; or consent of the instructor",
         expect![[r#"
-            Error: Error at <str>:[1,44]:
-            	...T 267, 466, or -->STAT 265; or co...
-            	Expected one of Number, Topic, Alternative, EnOrAlternativeOption."#]],
-    );
-    check(
-        "CMPUT 204 and 267; one of MATH 115, 118, 136, 146, or 156",
-        expect![[r#"
-            Error: Error at <str>:[1,17]:
-            	...PUT 204 and 267-->; one of MATH 1...
-            	Expected one of STOP, Comma, Or, Ou, Unless."#]],
+            Error: Error at <str>:[1,54]:
+            	..., or STAT 265; -->or consent of t...
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
     );
     check(
         "CMPUT 201 and 204, or 275; one of CMPUT 229, E E 380 or ECE 212",
         expect![[r#"
             Error: Error at <str>:[1,19]:
             	...T 201 and 204, -->or 275; one of ...
-            	Expected one of Topic, OneOf, Both, Alternative, AndOr, And, Et."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et."#]],
     );
     check(
         "CMPUT 201 and 204, or 275; and CMPUT 291",
         expect![[r#"
             Error: Error at <str>:[1,19]:
             	...T 201 and 204, -->or 275; and CMP...
-            	Expected one of Topic, OneOf, Both, Alternative, AndOr, And, Et."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et."#]],
     );
     check(
         "One of CMPUT 201 or CMPUT 275, CMPUT 204, and any 300-level Computing Science course, or \
@@ -519,28 +536,28 @@ fn misc_broken() {
         expect![[r#"
             Error: Error at <str>:[1,46]:
             	...CMPUT 204, and -->any 300-level C...
-            	Expected one of Number, Topic, OneOf, Both, Alternative."#]],
+            	Expected one of Number, Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative."#]],
     );
     check(
         "CMPUT 301 and 291, or consent of the instructor",
         expect![[r#"
             Error: Error at <str>:[1,19]:
             	...T 301 and 291, -->or consent of t...
-            	Expected one of Topic, OneOf, Both, Alternative, AndOr, And, Et."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et."#]],
     );
     check(
         "CMPUT 204 or 275, 301; one of CMPUT 340, 418 or equivalent knowledge, and MATH 214",
         expect![[r#"
             Error: Error at <str>:[1,18]:
             	...UT 204 or 275, -->301; one of CMP...
-            	Expected one of Topic, OneOf, Both, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
     );
     check(
         "CMPUT 201 and 204, or 275; one of CMPUT 340, 418 or equivalent knowledge; MATH 214",
         expect![[r#"
             Error: Error at <str>:[1,19]:
             	...T 201 and 204, -->or 275; one of ...
-            	Expected one of Topic, OneOf, Both, Alternative, AndOr, And, Et."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et."#]],
     );
     check(
         "one of CMPUT 229, E E 380 or ECE 212, and a 300-level Computing Science course or \
@@ -548,7 +565,7 @@ fn misc_broken() {
         expect![[r#"
             Error: Error at <str>:[1,42]:
             	...r ECE 212, and -->a 300-level Com...
-            	Expected one of Number, Topic, OneOf, Both, Alternative."#]],
+            	Expected one of Number, Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative."#]],
     );
     check(
         "CMPUT 201 or 275; one of CMPUT 340, 418, ECE 240, or equivalent knowledge; one of MATH \
@@ -559,25 +576,18 @@ fn misc_broken() {
             	Expected one of STOP, Comma, Semicolon, AndOr, And, Et, Or, Ou, Unless."#]],
     );
     check(
-        "CMPUT 201 or 275; one of CMPUT 229, E E 380 or ECE 212",
-        expect![[r#"
-            Error: Error at <str>:[1,54]:
-            	... 380 or ECE 212-->...
-            	Expected one of STOP, Comma, Semicolon, Slash, AndOr, And, Et, Or, Ou, Unless."#]],
-    );
-    check(
         "any 300-level Computing Science course",
         expect![[r#"
             Error: Error at <str>:[1,0]:
             	...-->any 300-level C...
-            	Expected one of Topic, OneOf, Both, Alternative, None."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, None."#]],
     );
     check(
         "201 or 275, and any 300-level Computing Science course",
         expect![[r#"
             Error: Error at <str>:[1,0]:
             	...-->201 or 275, and...
-            	Expected one of Topic, OneOf, Both, Alternative, None."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, None."#]],
     );
     check(
         "one of CMPUT 340 or 418; one of STAT 141, 151, 235 or 265 or SCI 151; or consent of the \
@@ -588,19 +598,12 @@ fn misc_broken() {
             	Expected EnOrAlternativeOption."#]],
     );
     check(
-        "CMPUT 204 or 275; MATH 125; CMPUT 267 or MATH 214; or consent of the instructor",
-        expect![[r#"
-            Error: Error at <str>:[1,51]:
-            	...7 or MATH 214; -->or consent of t...
-            	Expected one of Number, Topic, OneOf, Alternative, AndOr, And, Et, Or, Ou."#]],
-    );
-    check(
         "CMPUT 204 and CMPUT 267; any 300-level Computing Science course; and one of MATH 101, \
          115, 118, 136, 146, or 156",
         expect![[r#"
             Error: Error at <str>:[1,25]:
             	...and CMPUT 267; -->any 300-level C...
-            	Expected one of Number, Topic, OneOf, Alternative, AndOr, And, Et, Or, Ou."#]],
+            	Expected one of Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative, AndOr, And, Et, Number, Or, Ou."#]],
     );
     check(
         "one of CMPUT 191 or 195, one of CMPUT 200, NS 115, or PHIL 385, and three of CMPUT 267, \
@@ -612,6 +615,6 @@ fn misc_broken() {
         expect![[r#"
             Error: Error at <str>:[1,68]:
             	... PHIL 385, and -->three of CMPUT ...
-            	Expected one of Number, Topic, OneOf, Both, Alternative."#]],
+            	Expected one of Number, Topic, OneOf, Both, Either, AMinimumGradeIn, Alternative."#]],
     );
 }

@@ -94,6 +94,7 @@ pub struct Course {
 pub type AllCourses = Expr;
 pub type AllCoursesSharedTopic = Expr;
 pub type Alternative = ();
+pub type AMinimumGradeIn = ();
 pub type And = ();
 pub type AndEt = ();
 pub type AndOr = ();
@@ -103,6 +104,7 @@ pub type Any3 = Expr;
 pub type Any3Like = Expr;
 pub type AnyCourses = Expr;
 pub type AnyCoursesSharedTopic = Expr;
+pub type AnyCoursesSharedTopicNoCommas = Expr;
 pub type Both = ();
 pub type BothOpt = ();
 pub type CommaOptAnd = ();
@@ -124,6 +126,9 @@ pub type CoursesSharedTopicHeadElement1 = Vec<u64>;
 pub type CoursesSharedTopicSlashList = Expr;
 pub type CoursesSharedTopicSlashListElement = u64;
 pub type CoursesSharedTopicSlashListElement1 = Vec<u64>;
+pub type Either = ();
+pub type EitherCourse = Expr;
+pub type EitherOpt = ();
 pub type EnOrAlternativeOption = ();
 pub type EnUnlessAlternativeOption = ();
 pub type Et = ();
@@ -138,12 +143,20 @@ pub type OrOu = ();
 pub type Ou = ();
 pub type Topic = String;
 pub type TopLevel = Expr;
+pub type TopLevelCommaList = TopLevelList;
+pub type TopLevelCommaListElement = Any1;
+pub type TopLevelCommaListElement0 = TopLevelCommaListElement1;
+pub type TopLevelCommaListElement1 = Vec<TopLevelCommaListElement>;
+pub type TopLevelCommaListLastElement = TopLevelListLastElement;
+pub type TopLevelCommaListLastElementOpt = TopLevelCommaListLastElement;
 pub type TopLevelList = Expr;
-pub type TopLevelListElement = Expr;
-pub type TopLevelListElement0 = Vec<Expr>;
-pub type TopLevelListElement1 = Vec<Expr>;
 pub type TopLevelListLastElement = Expr;
-pub type TopLevelListLastElementOpt = Expr;
+pub type TopLevelSemicolonList = TopLevelCommaList;
+pub type TopLevelSemicolonListElement = Any1;
+pub type TopLevelSemicolonListElement0 = TopLevelSemicolonListElement1;
+pub type TopLevelSemicolonListElement1 = Vec<TopLevelSemicolonListElement>;
+pub type TopLevelSemicolonListLastElement = TopLevelListLastElement;
+pub type TopLevelSemicolonListLastElementOpt = TopLevelSemicolonListLastElement;
 pub type Unless = ();
 pub type UnlessAlternative = ();
 /// Functions are sorted alphabetically
@@ -186,6 +199,7 @@ pub fn all_courses_shared_topic_c1(
     )
 }
 pub fn alternative(_: &Ctx, _: Token) {}
+pub fn aminimum_grade_in(_: &Ctx, _: Token) {}
 pub fn and_et_and_or(_: &Ctx, (): ()) {}
 pub fn and_et_and(_: &Ctx, (): ()) {}
 pub fn and_et_et(_: &Ctx, (): ()) {}
@@ -222,6 +236,22 @@ pub fn any_courses_shared_topic_c2(
             .collect(),
     )
 }
+pub fn any_courses_shared_topic_c3(
+    ctx: &Ctx,
+    (): (),
+    (topic, numbers): (Topic, Vec<Number>),
+    (): (),
+    (): (),
+) -> Expr {
+    any_courses_shared_topic_c2(ctx, (), (topic, numbers))
+}
+pub fn any_courses_shared_topic_no_commas_c1(
+    ctx: &Ctx,
+    (): (),
+    (topic, numbers): (Topic, Vec<Number>),
+) -> Expr {
+    any_courses_shared_topic_c2(ctx, (), (topic, numbers))
+}
 pub fn any1_all_courses_shared_topic(_: &Ctx, expr: Expr) -> Expr {
     expr
 }
@@ -255,10 +285,22 @@ pub fn any2_c4(_: &Ctx, expr: Expr, (): ()) -> Expr {
 pub fn any3_alternative(_: &Ctx, (): ()) -> Expr {
     Expr::Empty
 }
+pub fn any3_any_courses_shared_topic_no_commas(
+    _: &Ctx,
+    expr: AnyCoursesSharedTopicNoCommas,
+) -> Expr {
+    expr
+}
+pub fn any3_c6(_: &Ctx, (): (), expr: Expr) -> Expr {
+    expr
+}
 pub fn any3_course(_: &Ctx, course: Course) -> Expr {
     Expr::Course(course)
 }
 pub fn any3_courses_shared_topic_slash_list(_: &Ctx, expr: Expr) -> Expr {
+    expr
+}
+pub fn any3_either_course(_: &Ctx, expr: Expr) -> Expr {
     expr
 }
 pub fn any3like_any3(_: &Ctx, expr: Expr) -> Expr {
@@ -418,6 +460,12 @@ pub fn courses_shared_topic_slash_list_element1_courses_shared_topic_slash_list_
 ) -> Vec<u64> {
     vec![num]
 }
+pub fn either_course_c1(_: &Ctx, (): (), lhs: Any3, (): (), rhs: Any3) -> Expr {
+    Expr::any(vec![lhs, rhs])
+}
+pub fn either_opt_either(_: &Ctx, (): ()) {}
+pub fn either_opt_empty(_: &Ctx) {}
+pub fn either(_: &Ctx, _: Token) {}
 pub fn en_or_alternative_option(_: &Ctx, _: Token) {}
 pub fn en_unless_alternative_option(_: &Ctx, _: Token) {}
 pub fn et(_: &Ctx, _: Token) {}
@@ -438,7 +486,7 @@ pub fn ou(_: &Ctx, _: Token) {}
 pub fn top_level_any1(_: &Ctx, expr: Expr) -> Expr {
     expr
 }
-pub fn top_level_list_c1(
+pub fn top_level_comma_list_c1(
     _: &Ctx,
     before: Expr,
     mut list: Vec<Expr>,
@@ -448,19 +496,19 @@ pub fn top_level_list_c1(
     list.push(after);
     Expr::all(list)
 }
-pub fn top_level_list_element_any1(_: &Ctx, expr: Expr) -> Expr {
+pub fn top_level_comma_list_element_any1(_: &Ctx, expr: Expr) -> Expr {
     expr
 }
-pub fn top_level_list_element0_empty(_: &Ctx) -> Vec<Expr> {
+pub fn top_level_comma_list_element0_empty(_: &Ctx) -> Vec<Expr> {
     vec![]
 }
-pub fn top_level_list_element0_top_level_list_element1(
+pub fn top_level_comma_list_element0_top_level_comma_list_element1(
     _: &Ctx,
-    list: Vec<Expr>,
-) -> Vec<Expr> {
-    list
+    top_level_comma_list_element1: TopLevelCommaListElement1,
+) -> TopLevelCommaListElement0 {
+    top_level_comma_list_element1
 }
-pub fn top_level_list_element1_c1(
+pub fn top_level_comma_list_element1_c1(
     _: &Ctx,
     mut list: Vec<Expr>,
     expr: Expr,
@@ -468,29 +516,86 @@ pub fn top_level_list_element1_c1(
     list.push(expr);
     list
 }
-pub fn top_level_list_element1_top_level_list_element(
+pub fn top_level_comma_list_element1_top_level_comma_list_element(
     _: &Ctx,
-    top_level_list_element: Expr,
-) -> Vec<Expr> {
-    vec![top_level_list_element]
+    top_level_comma_list_element: TopLevelCommaListElement,
+) -> TopLevelCommaListElement1 {
+    vec![top_level_comma_list_element]
 }
-pub fn top_level_list_last_element_c1(_: &Ctx, (): (), expr: Expr) -> Expr {
+pub fn top_level_comma_list_last_element_c1(_: &Ctx, (): (), expr: Expr) -> Expr {
     expr
 }
-pub fn top_level_list_last_element_opt_empty(_: &Ctx) -> Expr {
+pub fn top_level_comma_list_last_element_opt_empty(_: &Ctx) -> Expr {
     Expr::Empty
 }
-pub fn top_level_list_last_element_opt_top_level_list_last_element(
+pub fn top_level_comma_list_last_element_opt_top_level_comma_list_last_element(
     _: &Ctx,
-    top_level_list_last_element: Expr,
-) -> Expr {
-    top_level_list_last_element
+    top_level_comma_list_last_element: TopLevelCommaListLastElement,
+) -> TopLevelCommaListLastElementOpt {
+    top_level_comma_list_last_element
 }
 pub fn top_level_none(_: &Ctx, (): ()) -> Expr {
     Expr::Empty
 }
-pub fn top_level_top_level_list(_: &Ctx, expr: Expr) -> Expr {
+pub fn top_level_semicolon_list_c1(
+    _: &Ctx,
+    before: Expr,
+    mut list: Vec<Expr>,
+    after: Expr,
+) -> Expr {
+    list.insert(0, before);
+    list.push(after);
+    Expr::all(list)
+}
+pub fn top_level_semicolon_list_element_any1(_: &Ctx, expr: Expr) -> Expr {
     expr
+}
+pub fn top_level_semicolon_list_element0_empty(_: &Ctx) -> Vec<Expr> {
+    vec![]
+}
+pub fn top_level_semicolon_list_element0_top_level_semicolon_list_element1(
+    _: &Ctx,
+    top_level_semicolon_list_element1: TopLevelSemicolonListElement1,
+) -> TopLevelSemicolonListElement0 {
+    top_level_semicolon_list_element1
+}
+pub fn top_level_semicolon_list_element1_c1(
+    _: &Ctx,
+    mut list: Vec<Expr>,
+    expr: Expr,
+) -> Vec<Expr> {
+    list.push(expr);
+    list
+}
+pub fn top_level_semicolon_list_element1_top_level_semicolon_list_element(
+    _: &Ctx,
+    top_level_semicolon_list_element: TopLevelSemicolonListElement,
+) -> TopLevelSemicolonListElement1 {
+    vec![top_level_semicolon_list_element]
+}
+pub fn top_level_semicolon_list_last_element_c1(_: &Ctx, (): (), expr: Expr) -> Expr {
+    expr
+}
+pub fn top_level_semicolon_list_last_element_opt_empty(_: &Ctx) -> Expr {
+    Expr::Empty
+}
+pub fn top_level_semicolon_list_last_element_opt_top_level_semicolon_list_last_element(
+    _: &Ctx,
+    top_level_semicolon_list_last_element: TopLevelSemicolonListLastElement,
+) -> TopLevelSemicolonListLastElementOpt {
+    top_level_semicolon_list_last_element
+}
+pub fn top_level_top_level_comma_list(
+    _: &Ctx,
+    top_level_comma_list: TopLevelCommaList,
+) -> TopLevel {
+    top_level_comma_list
+}
+pub fn top_level_top_level_semicolon_list(
+    _: &Ctx,
+    top_level_semicolon_list: TopLevelSemicolonList,
+) -> TopLevel {
+    top_level_semicolon_list
 }
 pub fn topic(_: &Ctx, token: Token) -> String {
     token.value.into()
