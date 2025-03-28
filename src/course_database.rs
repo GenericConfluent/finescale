@@ -242,17 +242,20 @@ impl CourseGraph {
             for (idx, (node_from, _, relation)) in edge_queue
                 .iter()
                 .enumerate()
-                .filter(|edge| edge.1 .1 == course_id)
+                .filter(|edge| edge.1.1 == course_id)
             {
                 courses.add_edge(*node_from, node, *relation);
                 remove_from_queue.push(idx);
             }
 
+            // Delete them from the queue
             for idx in &remove_from_queue {
                 edge_queue.remove(*idx);
             }
+
             remove_from_queue.clear();
 
+            // This newly added course may have some requirements. Let's go add them
             if let Some(req) = reqs {
                 descend_deptree(&mut courses, &mut edge_queue, &node, &req);
             }
@@ -270,6 +273,31 @@ impl CourseGraph {
         }
 
         Ok(Self { courses })
+    }
+
+    /// Take in a list of desired courses and fill all dependencies that need to
+    /// be taken. We want a ranking between the different schedules generated,
+    /// so we need an objective function we can use ot quantify the value of a
+    /// single schedule.
+    ///
+    /// TODO: This also needs to take in a list of constraints. This is both a
+    /// CSP and optimization problem.
+    ///
+    /// Optimize (primary):
+    /// - Take the maximum number of desired courses.
+    /// - Take the minimum number of implied dependencies
+    ///
+    ///
+    ///
+    /// Optimize (secondary):
+    /// - Maximize rate my prof across classes
+    /// - Minimize distance between adjacent classes in a single term
+    pub fn schedule(&self, desired: Vec<CourseId>) -> Vec<CourseId> {
+        // First we need to consider all the sets of dependencies that allow us
+        // to take the desired courses, these will be subgraphs of the
+        // dependency graph.
+
+        // Next
     }
 
     pub fn index_of(&self, id: &CourseId) -> Option<NodeIndex> {
