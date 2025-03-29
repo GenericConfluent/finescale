@@ -3,6 +3,22 @@ name = "finescale"
 version = "0.1.0"
 edition = "2024"
 
+# Some binary size optimizations
+[profile.release]
+strip = true 
+lto = true
+codegen-units = 1
+panic = "abort"
+
+# App bundle info for cargo-bundle
+[package.metadata.bundle]
+name = "Finescale"
+identifier = "com.genericconfluent.finescale"
+short_description = "Algorithmic planning for course schedules"
+category = "public.app-category.utilities"
+version = "0.1.0"
+osx_url_schemes = ["com.genericconfluent.finescale"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 anyhow = "1.0.71"
